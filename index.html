@@ -177,57 +177,61 @@
             <div>
                 <div class="flex items-center gap-1.5 bg-slate-950/70 p-1.5 rounded-2xl border border-white/10">
                     <input type="text" id="search-input" placeholder="ابحث عن مكان، شارع، محل..." class="bg-transparent w-full text-xs text-white placeholder-gray-400 outline-none px-2" onkeypress="if(event.key==='Enter') searchRealOSMPlaces()">
-                    <button onclick="searchRealOSMPlaces()" id="btn-search" class="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold transition shrink-0">
+                    <button onclick="searchRealOSMPlaces()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold transition shrink-0">
                         <i class="fa-solid fa-magnifying-glass"></i>
                     </button>
                 </div>
-                <!-- Search Results List inside Box -->
-                <div id="search-results-box" class="hidden mt-2 bg-slate-950/90 rounded-2xl border border-blue-500/30 max-h-48 overflow-y-auto divide-y divide-white/10"></div>
+                <!-- Search & Nearby Verified Results Dropdown -->
+                <div id="search-results-box" class="hidden mt-1.5 bg-slate-950/95 rounded-2xl overflow-hidden divide-y divide-white/10 max-h-44 overflow-y-auto border border-white/10"></div>
             </div>
 
-            <!-- 2. Full 360° Map Rotation Control -->
-            <div class="bg-slate-950/50 p-3 rounded-2xl border border-white/10">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-[11px] font-extrabold text-gray-300 flex items-center gap-1.5">
-                        <i class="fa-solid fa-compass text-cyan-400" id="compass-needle-icon"></i>
+            <!-- 2. Full 360° Map Rotation Controls -->
+            <div class="bg-slate-950/60 p-2.5 rounded-2xl border border-white/10">
+                <div class="flex items-center justify-between text-[11px] font-bold text-gray-300 mb-2">
+                    <span class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-compass text-blue-400 transition-transform duration-150" id="compass-needle-icon"></i>
                         <span data-i18n="rotateTitle">تدوير الخريطة 360°</span>
                     </span>
-                    <div class="flex items-center gap-1.5">
-                        <span id="bearing-deg-val" class="text-[11px] font-extrabold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md">0°</span>
-                        <button onclick="setMapRotation(0)" class="text-[10px] font-bold bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-md text-white transition" title="إعادة للشمال">
-                            N
-                        </button>
-                    </div>
+                    <span id="bearing-deg-val" class="text-blue-400 font-extrabold">0°</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="rotateMapBy(-45)" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs transition shrink-0" title="تدوير يسار 45°">
-                        <i class="fa-solid fa-rotate-left"></i>
-                    </button>
-                    <input type="range" id="rotation-slider" min="0" max="360" value="0" oninput="setMapRotation(this.value)" class="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg">
-                    <button onclick="rotateMapBy(45)" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs transition shrink-0" title="تدوير يمين 45°">
-                        <i class="fa-solid fa-rotate-right"></i>
-                    </button>
+                    <button onclick="rotateMapBy(-45)" class="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold" title="تدوير يسار">-45°</button>
+                    <input type="range" id="rotation-slider" min="0" max="360" value="0" oninput="setMapRotation(this.value)" class="w-full accent-blue-500 cursor-pointer h-1.5 bg-gray-700 rounded-lg">
+                    <button onclick="rotateMapBy(45)" class="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold" title="تدوير يمين">+45°</button>
+                    <button onclick="setMapRotation(0)" class="px-2 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white text-[10px] font-bold" title="إعادة للشمال">0°</button>
                 </div>
             </div>
 
-            <!-- 3. Verified Nearby Categories (Fuel, Hospitals, Restaurants, Shops, Mosques) -->
+            <!-- 3. Verified Nearby Categories (Strictly Separated & Sorted Closest-First) -->
             <div>
-                <div class="text-[11px] font-extrabold text-gray-400 mb-2" data-i18n="categoriesTitle">استكشاف المعالم الحقيقية المسجلة:</div>
+                <div class="text-[11px] font-extrabold text-gray-400 mb-2" data-i18n="categoriesTitle">استكشاف أقرب المعالم (مرتبة بالمسطرة الهندسية):</div>
                 <div class="grid grid-cols-2 gap-1.5">
-                    <button onclick="findNearbyOSM('fuel')" class="p-2 rounded-xl bg-white/5 hover:bg-amber-500/20 border border-white/10 text-xs font-bold flex items-center gap-2 transition">
-                        <i class="fa-solid fa-gas-pump text-amber-400 w-4"></i> <span data-i18n="fuel">محطات وقود</span>
+                    <button onclick="findNearbyOSM('fuel')" class="p-2 rounded-xl bg-white/5 hover:bg-amber-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-gas-pump text-amber-400 w-3.5"></i> <span data-i18n="fuel">محطات وقود</span>
                     </button>
-                    <button onclick="findNearbyOSM('hospital')" class="p-2 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 text-xs font-bold flex items-center gap-2 transition">
-                        <i class="fa-solid fa-hospital text-rose-400 w-4"></i> <span data-i18n="hospital">مستشفيات</span>
+                    <button onclick="findNearbyOSM('pharmacy')" class="p-2 rounded-xl bg-white/5 hover:bg-teal-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-pills text-teal-400 w-3.5"></i> <span data-i18n="pharmacy">صيدليات</span>
                     </button>
-                    <button onclick="findNearbyOSM('food')" class="p-2 rounded-xl bg-white/5 hover:bg-emerald-500/20 border border-white/10 text-xs font-bold flex items-center gap-2 transition">
-                        <i class="fa-solid fa-utensils text-emerald-400 w-4"></i> <span data-i18n="food">مطاعم</span>
+                    <button onclick="findNearbyOSM('clinic')" class="p-2 rounded-xl bg-white/5 hover:bg-sky-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-stethoscope text-sky-400 w-3.5"></i> <span data-i18n="clinic">عيادات ومجمعات</span>
                     </button>
-                    <button onclick="findNearbyOSM('shop')" class="p-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 text-xs font-bold flex items-center gap-2 transition">
-                        <i class="fa-solid fa-store text-purple-400 w-4"></i> <span data-i18n="shop">محلات وأسواق</span>
+                    <button onclick="findNearbyOSM('gov_hospital')" class="p-2 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-hospital text-rose-500 w-3.5"></i> <span data-i18n="govHospital">مستشفيات حكومية</span>
                     </button>
-                    <button onclick="findNearbyOSM('mosque')" class="p-2 rounded-xl bg-white/5 hover:bg-cyan-500/20 border border-white/10 text-xs font-bold flex items-center gap-2 transition col-span-2">
-                        <i class="fa-solid fa-mosque text-cyan-400 w-4"></i> <span data-i18n="mosque">مساجد وجوامع</span>
+                    <button onclick="findNearbyOSM('private_hospital')" class="p-2 rounded-xl bg-white/5 hover:bg-pink-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-heart-pulse text-pink-400 w-3.5"></i> <span data-i18n="privateHospital">مستشفيات أهلية</span>
+                    </button>
+                    <button onclick="findNearbyOSM('shop_special')" class="p-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-screwdriver-wrench text-purple-400 w-3.5"></i> <span data-i18n="shopSpecial">محلات (بنشر/كوزمتك/سيراميك)</span>
+                    </button>
+                    <button onclick="findNearbyOSM('market_mall')" class="p-2 rounded-xl bg-white/5 hover:bg-indigo-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-cart-shopping text-indigo-400 w-3.5"></i> <span data-i18n="marketMall">أسواق ومولات</span>
+                    </button>
+                    <button onclick="findNearbyOSM('food')" class="p-2 rounded-xl bg-white/5 hover:bg-emerald-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-utensils text-emerald-400 w-3.5"></i> <span data-i18n="food">مطاعم</span>
+                    </button>
+                    <button onclick="findNearbyOSM('mosque')" class="p-2 rounded-xl bg-white/5 hover:bg-cyan-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition col-span-2">
+                        <i class="fa-solid fa-mosque text-cyan-400 w-3.5"></i> <span data-i18n="mosque">مساجد وجوامع</span>
                     </button>
                 </div>
             </div>
@@ -259,19 +263,19 @@
                         <div class="text-[11px] text-gray-400 bg-black/25 p-2 rounded-xl text-center" id="empty-waypoints-msg" data-i18n="tapMap">اضغط على أي نقطة في الخريطة أو ابحث لإضافة وجهة</div>
                     </div>
 
-                    <!-- Exact Geometric & Street Distance Summary -->
+                    <!-- Exact Geometric & Street Distance Summary (Meters + Feet Precision) -->
                     <div class="grid grid-cols-3 gap-1.5 bg-black/35 p-2 rounded-xl text-center border border-white/5">
                         <div>
                             <div class="text-[9px] text-gray-400 font-bold" data-i18n="roadDistLabel">مسافة الطريق</div>
-                            <div class="text-xs font-extrabold text-blue-400 mt-0.5" id="metric-dist">0 م</div>
+                            <div class="text-[11px] font-extrabold text-blue-400 mt-0.5 leading-tight" id="metric-dist">0 م / 0 ft</div>
                         </div>
                         <div class="border-x border-white/10">
-                            <div class="text-[9px] text-gray-400 font-bold" data-i18n="geoDistLabel">البعد الهندسي</div>
-                            <div class="text-xs font-extrabold text-cyan-400 mt-0.5" id="metric-geo-dist">0 م</div>
+                            <div class="text-[9px] text-gray-400 font-bold" data-i18n="geoDistLabel">مسطرة هندسية</div>
+                            <div class="text-[11px] font-extrabold text-cyan-400 mt-0.5 leading-tight" id="metric-geo-dist">0 م / 0 ft</div>
                         </div>
                         <div>
                             <div class="text-[9px] text-gray-400 font-bold" data-i18n="timeLabel">الوقت المقدر</div>
-                            <div class="text-xs font-extrabold text-emerald-400 mt-0.5" id="metric-time">0 د</div>
+                            <div class="text-[11px] font-extrabold text-emerald-400 mt-0.5 leading-tight" id="metric-time">0 د</div>
                         </div>
                     </div>
                 </div>
@@ -348,11 +352,15 @@
                 myLoc: 'شوێنەکەم',
                 searchPlaceholder: 'بگەڕێ بۆ شوێن، شەقام، دووکان...',
                 rotateTitle: 'سوڕاندنی نەخشە ٣٦٠°',
-                categoriesTitle: 'شوێنە ڕاستەقینە نزیکەکان:',
+                categoriesTitle: 'نزیکترین شوێنەکان (بە پێوانەی ئەندازەیی ورد):',
                 fuel: 'بەنزینخانە',
-                hospital: 'نەخۆشخانە',
+                pharmacy: 'دەرمانخانە',
+                clinic: 'نۆرینگە و کۆمەڵگای پزیشکی',
+                govHospital: 'نەخۆشخانەی حکومی',
+                privateHospital: 'نەخۆشخانەی ئەهلی',
+                shopSpecial: 'دووکان (پەنچەری/کۆزمەتیک/سیرامیک)',
+                marketMall: 'مارکێت و مۆڵ',
                 food: 'چێشتخانە',
-                shop: 'دووکان و بازاڕ',
                 mosque: 'مزگەوت و جامع',
                 alert: 'ئاگاداری',
                 save: 'داگرتن',
@@ -364,7 +372,7 @@
                 clearAll: 'سڕینەوەی هەمووی',
                 tapMap: 'پەنجە بنێ بە نەخشەکەدا یان بگەڕێ بۆ دیاریکردنی شوێن',
                 roadDistLabel: 'دووری ڕێگا',
-                geoDistLabel: 'دووری ئەندازەیی',
+                geoDistLabel: 'ڕاستە هێڵ (مەتر/فیت)',
                 timeLabel: 'کاتی خەمڵێنراو',
                 startNav: 'دەستپێکردنی ڕێنمایی',
                 arrived: 'گەیشتیتە شوێنی مەبەست!',
@@ -379,11 +387,15 @@
                 myLoc: 'موقعي',
                 searchPlaceholder: 'ابحث عن مكان، شارع، محل...',
                 rotateTitle: 'تدوير الخريطة 360°',
-                categoriesTitle: 'استكشاف أقرب المعالم الحقيقية:',
+                categoriesTitle: 'استكشاف أقرب المعالم (مسطرة هندسية دقيقة):',
                 fuel: 'محطات وقود',
-                hospital: 'مستشفيات',
+                pharmacy: 'صيدليات',
+                clinic: 'عيادات ومجمعات',
+                govHospital: 'مستشفيات حكومية',
+                privateHospital: 'مستشفيات أهلية',
+                shopSpecial: 'محلات (بنشر/كوزمتك/سيراميك)',
+                marketMall: 'أسواق ومولات',
                 food: 'مطاعم',
-                shop: 'محلات وأسواق',
                 mosque: 'مساجد وجوامع',
                 alert: 'تنبيه',
                 save: 'حفظ',
@@ -395,7 +407,7 @@
                 clearAll: 'مسح الكل',
                 tapMap: 'اضغط على أي نقطة في الخريطة أو ابحث لإضافة وجهة',
                 roadDistLabel: 'مسافة الطريق',
-                geoDistLabel: 'البعد الهندسي',
+                geoDistLabel: 'مسطرة هندسية',
                 timeLabel: 'الوقت المقدر',
                 startNav: 'ابدأ التوجيه',
                 arrived: 'لقد وصلت إلى وجهتك بدقة!',
@@ -410,11 +422,15 @@
                 myLoc: 'My GPS',
                 searchPlaceholder: 'Search place, street, shop...',
                 rotateTitle: '360° Map Rotation',
-                categoriesTitle: 'Nearest Verified Landmarks:',
+                categoriesTitle: 'Nearest Verified Landmarks (Exact Ruler):',
                 fuel: 'Fuel Stations',
-                hospital: 'Hospitals',
+                pharmacy: 'Pharmacies',
+                clinic: 'Clinics & Med Centers',
+                govHospital: 'Gov Hospitals',
+                privateHospital: 'Private Hospitals',
+                shopSpecial: 'Shops (Tire/Cosmetic/Ceramic)',
+                marketMall: 'Markets & Malls',
                 food: 'Restaurants',
-                shop: 'Shops & Markets',
                 mosque: 'Mosques',
                 alert: 'Alert',
                 save: 'Save',
@@ -426,7 +442,7 @@
                 clearAll: 'Clear All',
                 tapMap: 'Tap anywhere on the map or search to add destination',
                 roadDistLabel: 'Road Dist.',
-                geoDistLabel: 'Geometric',
+                geoDistLabel: 'Exact Ruler',
                 timeLabel: 'Est. Time',
                 startNav: 'Start Navigation',
                 arrived: 'You have arrived at your destination!',
@@ -441,11 +457,15 @@
                 myLoc: 'Konumum',
                 searchPlaceholder: 'Yer, cadde, mağaza arayın...',
                 rotateTitle: '360° Harita Döndürme',
-                categoriesTitle: 'En Yakın Gerçek Yerler:',
+                categoriesTitle: 'En Yakın Gerçek Yerler (Hassas Cetvel):',
                 fuel: 'Akaryakıt',
-                hospital: 'Hastaneler',
+                pharmacy: 'Eczaneler',
+                clinic: 'Klinikler',
+                govHospital: 'Devlet Hastaneleri',
+                privateHospital: 'Özel Hastaneler',
+                shopSpecial: 'Dükkanlar (Lastik/Kozmetik/Seramik)',
+                marketMall: 'Market & AVM',
                 food: 'Restoranlar',
-                shop: 'Mağaza & Pazar',
                 mosque: 'Camiler',
                 alert: 'Uyarı',
                 save: 'İndir',
@@ -457,7 +477,7 @@
                 clearAll: 'Tümünü Sil',
                 tapMap: 'Hedef eklemek için haritaya dokunun veya arayın',
                 roadDistLabel: 'Yol Mesafesi',
-                geoDistLabel: 'Geometrik',
+                geoDistLabel: 'Hassas Cetvel',
                 timeLabel: 'Tahmini Süre',
                 startNav: 'Navigasyonu Başlat',
                 arrived: 'Hedefinize ulaştınız!',
@@ -472,11 +492,15 @@
                 myLoc: 'موقعیت من',
                 searchPlaceholder: 'جستجوی مکان، خیابان، فروشگاه...',
                 rotateTitle: 'چرخش 360 درجه نقشه',
-                categoriesTitle: 'نزدیک‌ترین مکان‌های واقعی:',
+                categoriesTitle: 'نزدیک‌ترین مکان‌ها (خط‌کش دقیق هندسی):',
                 fuel: 'پمپ بنزین',
-                hospital: 'بیمارستان',
+                pharmacy: 'داروخانه',
+                clinic: 'کلینیک و درمانگاه',
+                govHospital: 'بیمارستان دولتی',
+                privateHospital: 'بیمارستان خصوصی',
+                shopSpecial: 'مغازه (آپاراتی/آرایشی/سرامیک)',
+                marketMall: 'مارکت و مال',
                 food: 'رستوران',
-                shop: 'فروشگاه و بازار',
                 mosque: 'مسجد',
                 alert: 'هشدار',
                 save: 'ذخیره',
@@ -488,7 +512,7 @@
                 clearAll: 'پاک کردن همه',
                 tapMap: 'برای افزودن مقصد روی نقشه ضربه بزنید یا جستجو کنید',
                 roadDistLabel: 'مسافت جاده',
-                geoDistLabel: 'فاصله هندسی',
+                geoDistLabel: 'خط‌کش هندسی',
                 timeLabel: 'زمان تخمینی',
                 startNav: 'شروع مسیریابی',
                 arrived: 'شما به مقصد رسیدید!',
@@ -809,30 +833,49 @@
 
         async function findNearbyOSM(categoryKey) {
             const resultsBox = document.getElementById('search-results-box');
-            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-emerald-300 flex items-center gap-2"><i class="fa-solid fa-spinner animate-spin"></i> ${currentLang === 'ckb' ? 'گەڕان بۆ نزیکترین شوێنە ڕاستەقینەکان...' : 'جاري جلب أقرب المعالم الحقيقية المسجلة...'}</div>`;
+            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-emerald-300 flex items-center gap-2"><i class="fa-solid fa-spinner animate-spin"></i> ${currentLang === 'ckb' ? 'گەڕان بۆ نزیکترین شوێنە ڕاستەقینەکان بە پێوانەی ورد...' : 'جاري جلب أقرب المعالم وترتيبها بالمسطرة الهندسية...'}</div>`;
             resultsBox.classList.remove('hidden');
 
             const center = userCoords || [map.getCenter().lat, map.getCenter().lng];
-            const radiusMeters = 4500; // Focused 4.5km radius for ultra-close & accurate nearby results
+            const radiusMeters = categoryKey.includes('hospital') ? 10000 : 5000;
 
             const queryFilters = {
                 fuel: `
                     node["amenity"="fuel"](around:${radiusMeters},${center[0]},${center[1]});
                     way["amenity"="fuel"](around:${radiusMeters},${center[0]},${center[1]});
                 `,
-                hospital: `
-                    node["amenity"~"hospital|clinic|doctors|pharmacy"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"~"hospital|clinic|doctors|pharmacy"](around:${radiusMeters},${center[0]},${center[1]});
+                pharmacy: `
+                    node["amenity"="pharmacy"](around:${radiusMeters},${center[0]},${center[1]});
+                    way["amenity"="pharmacy"](around:${radiusMeters},${center[0]},${center[1]});
+                    node["shop"="chemist"](around:${radiusMeters},${center[0]},${center[1]});
+                `,
+                clinic: `
+                    node["amenity"~"clinic|doctors|dentist"](around:${radiusMeters},${center[0]},${center[1]});
+                    way["amenity"~"clinic|doctors|dentist"](around:${radiusMeters},${center[0]},${center[1]});
+                    node["healthcare"~"clinic|doctor|centre"](around:${radiusMeters},${center[0]},${center[1]});
+                `,
+                gov_hospital: `
+                    node["amenity"="hospital"](around:${radiusMeters},${center[0]},${center[1]});
+                    way["amenity"="hospital"](around:${radiusMeters},${center[0]},${center[1]});
+                `,
+                private_hospital: `
+                    node["amenity"="hospital"](around:${radiusMeters},${center[0]},${center[1]});
+                    way["amenity"="hospital"](around:${radiusMeters},${center[0]},${center[1]});
+                `,
+                shop_special: `
+                    node["shop"]["shop"!~"supermarket|mall|department_store|convenience|grocery"](around:${radiusMeters},${center[0]},${center[1]});
+                    way["shop"]["shop"!~"supermarket|mall|department_store|convenience|grocery"](around:${radiusMeters},${center[0]},${center[1]});
+                    node["craft"](around:${radiusMeters},${center[0]},${center[1]});
+                `,
+                market_mall: `
+                    node["shop"~"supermarket|mall|department_store|convenience|grocery"](around:${radiusMeters},${center[0]},${center[1]});
+                    way["shop"~"supermarket|mall|department_store|convenience|grocery"](around:${radiusMeters},${center[0]},${center[1]});
+                    node["amenity"="marketplace"](around:${radiusMeters},${center[0]},${center[1]});
+                    way["amenity"="marketplace"](around:${radiusMeters},${center[0]},${center[1]});
                 `,
                 food: `
                     node["amenity"~"restaurant|cafe|fast_food|bakery"](around:${radiusMeters},${center[0]},${center[1]});
                     way["amenity"~"restaurant|cafe|fast_food|bakery"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                shop: `
-                    node["shop"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["shop"](around:${radiusMeters},${center[0]},${center[1]});
-                    node["amenity"~"marketplace|supermarket"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"~"marketplace|supermarket"](around:${radiusMeters},${center[0]},${center[1]});
                 `,
                 mosque: `
                     node["amenity"="place_of_worship"](around:${radiusMeters},${center[0]},${center[1]});
@@ -840,15 +883,7 @@
                 `
             };
 
-            const defaultLabels = {
-                fuel: currentLang === 'ckb' ? 'بەنزینخانە' : 'محطة وقود مسجلة',
-                hospital: currentLang === 'ckb' ? 'نەخۆشخانە / دەرمانخانە' : 'مركز صحي / مستشفى',
-                food: currentLang === 'ckb' ? 'چێشتخانە / کافێ' : 'مطعم / مقهى',
-                shop: currentLang === 'ckb' ? 'دووکان / بازاڕ' : 'محل / سوق تجاري',
-                mosque: currentLang === 'ckb' ? 'مزگەوت / جامع' : 'مسجد / جامع'
-            };
-
-            const bodyQuery = `[out:json][timeout:15];(${queryFilters[categoryKey] || queryFilters.fuel});out center 40;`;
+            const bodyQuery = `[out:json][timeout:18];(${queryFilters[categoryKey] || queryFilters.fuel});out center 60;`;
 
             try {
                 const res = await fetch('https://overpass-api.de/api/interpreter', {
@@ -863,42 +898,62 @@
                     (data.elements || []).forEach(el => {
                         const lat = el.lat || el.center?.lat;
                         const lon = el.lon || el.center?.lon;
-                        if (lat && lon) {
-                            const coordKey = `${lat.toFixed(5)},${lon.toFixed(5)}`;
-                            if (seenCoords.has(coordKey)) return;
-                            seenCoords.add(coordKey);
+                        if (!lat || !lon) return;
 
-                            const rawName = el.tags?.['name:ckb'] || el.tags?.['name:ar'] || el.tags?.name || el.tags?.['name:en'] || el.tags?.brand;
-                            const name = rawName || defaultLabels[categoryKey];
-                            const street = el.tags?.['addr:street'] || el.tags?.['addr:suburb'] || el.tags?.['addr:neighbourhood'] || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-                            const exactDist = calculateExactGeodesicMeters(center, [lat, lon]);
+                        const coordKey = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+                        if (seenCoords.has(coordKey)) return;
+                        seenCoords.add(coordKey);
 
-                            places.push({
-                                name: name,
-                                address: street,
-                                lat: lat,
-                                lon: lon,
-                                distMeters: exactDist,
-                                osmId: `${el.type}/${el.id}`
-                            });
+                        const tags = el.tags || {};
+                        const rawName = tags['name:ckb'] || tags['name:ar'] || tags.name || tags['name:en'] || tags.brand || '';
+                        const lowerName = rawName.toLowerCase();
+                        const opType = (tags['operator:type'] || tags.ownership || '').toLowerCase();
+
+                        // Strict classification & separation to prevent mixing categories
+                        if (categoryKey === 'gov_hospital') {
+                            const isPrivate = opType === 'private' || /أهلي|الأهلي|الاهلي|خاصة|الخاص|private|ئەهلی|تایبەت/.test(lowerName);
+                            const isGov = opType === 'public' || opType === 'government' || /حكومي|العام|الجمهوري|التعليمي|أزادي|آزادي|الولادة|الأطفال|الطوارئ|عام|گشتی|حکومی|فێرکاری|ئازادی|جمهوری/.test(lowerName);
+                            if (isPrivate && !isGov) return;
+                            if (!isGov && !opType) return;
+                        } else if (categoryKey === 'private_hospital') {
+                            const isGov = opType === 'public' || opType === 'government' || /حكومي|العام|الجمهوري|التعليمي|أزادي|آزادي|الولادة|الأطفال|گشتی|حکومی|فێرکاری/.test(lowerName);
+                            const isPrivate = opType === 'private' || /أهلي|الأهلي|الاهلي|خاصة|الخاص|private|ئەهلی|تایبەت|شفاء|الشفاء|حياة|الحياة|نور|دار/.test(lowerName);
+                            if (isGov && !isPrivate) return;
+                            if (!isPrivate && opType !== 'private') return;
                         }
+
+                        const typeLabel = getDetailedPlaceTypeLabel(categoryKey, tags);
+                        const finalName = rawName ? `${rawName} (${typeLabel})` : typeLabel;
+                        const street = tags['addr:street'] || tags['addr:suburb'] || tags['addr:neighbourhood'] || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+                        const exactDist = calculateExactGeodesicMeters(center, [lat, lon]);
+
+                        places.push({
+                            name: finalName,
+                            typeBadge: typeLabel,
+                            address: street,
+                            lat: lat,
+                            lon: lon,
+                            distMeters: exactDist
+                        });
                     });
 
-                    // Strictly sort by closest exact geometric distance first
+                    // Strictly sort from closest to farthest using exact Vincenty geodesic ruler
                     places.sort((a, b) => a.distMeters - b.distMeters);
-                    const closestPlaces = places.slice(0, 15);
+                    const closestPlaces = places.slice(0, 20);
                     renderPlacesDropdown(closestPlaces);
 
-                    // Clear previous POI markers and add interactive pins with direct Add/Remove controls
                     poiLayerGroup.clearLayers();
-                    closestPlaces.forEach(p => {
+                    closestPlaces.forEach((p, idx) => {
+                        const rank = idx + 1;
+                        const distStr = formatExactDistanceWithFeet(p.distMeters);
                         const popupDiv = document.createElement('div');
-                        popupDiv.style.minWidth = '160px';
+                        popupDiv.style.minWidth = '185px';
                         popupDiv.style.fontFamily = 'Vazirmatn, sans-serif';
                         popupDiv.innerHTML = `
+                            <div style="font-size:10px;font-weight:800;color:#2563eb;margin-bottom:2px;">#${rank} • ${p.typeBadge}</div>
                             <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:2px;">${p.name}</div>
                             <div style="font-size:11px;color:#475569;margin-bottom:4px;">${p.address}</div>
-                            <div style="font-size:11px;font-weight:700;color:#059669;margin-bottom:6px;">${formatExactDistance(p.distMeters)}</div>
+                            <div style="font-size:11px;font-weight:800;color:#059669;background:#ecfdf5;padding:3px 6px;border-radius:5px;margin-bottom:6px;">📏 ${distStr}</div>
                             <button id="popup-add-btn" style="width:100%;padding:5px 8px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">
                                 + ${currentLang === 'ckb' ? 'دیاریکردنی ئەم شوێنە' : 'تحديد كوجهة'}
                             </button>
@@ -923,27 +978,68 @@
             resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-amber-300">خادم الخرائط مشغول حالياً، أعد المحاولة بعد لحظات.</div>`;
         }
 
+        function getDetailedPlaceTypeLabel(categoryKey, tags) {
+            const isCkb = currentLang === 'ckb';
+            if (categoryKey === 'fuel') return isCkb ? 'بەنزینخانە' : 'محطة وقود';
+            if (categoryKey === 'pharmacy') return isCkb ? 'دەرمانخانە' : 'صيدلية';
+            if (categoryKey === 'clinic') {
+                if (tags.amenity === 'dentist') return isCkb ? 'نۆرینگەی ددان' : 'عيادة أسنان';
+                return isCkb ? 'نۆرینگە / کۆمەڵگای پزیشکی' : 'عيادة / مجمع طبي';
+            }
+            if (categoryKey === 'gov_hospital') return isCkb ? 'نەخۆشخانەی حکومی' : 'مستشفى حكومي';
+            if (categoryKey === 'private_hospital') return isCkb ? 'نەخۆشخانەی ئەهلی' : 'مستشفى أهلي';
+            if (categoryKey === 'mosque') return isCkb ? 'مزگەوت / جامع' : 'مسجد / جامع';
+
+            if (categoryKey === 'food') {
+                if (tags.amenity === 'cafe') return isCkb ? 'کافێ' : 'كافيه';
+                if (tags.amenity === 'fast_food') return isCkb ? 'خواردنی خێرا' : 'وجبات سريعة';
+                if (tags.amenity === 'bakery') return isCkb ? 'نانەواخانە / شیرینی' : 'مخبز / حلويات';
+                return isCkb ? 'چێشتخانە (ڕێستۆرانت)' : 'مطعم (ريستورانت)';
+            }
+
+            if (categoryKey === 'market_mall') {
+                if (tags.shop === 'mall' || tags.shop === 'department_store') return isCkb ? 'مۆڵ' : 'مول تجاري';
+                if (tags.amenity === 'marketplace') return isCkb ? 'بازاڕی گشتی' : 'سوق عام';
+                if (tags.shop === 'supermarket') return isCkb ? 'سۆپەرمارکێت' : 'سوبرماركت';
+                return isCkb ? 'مارکێت / بەقاڵی' : 'ماركت / أسواق';
+            }
+
+            if (categoryKey === 'shop_special') {
+                const s = (tags.shop || tags.craft || '').toLowerCase();
+                if (s.includes('tyre') || s.includes('car_repair') || s.includes('car_parts')) return isCkb ? 'پەنچەری / پێداویستی ئۆتۆمبێل' : 'بنشرجي / تصليح إطارات';
+                if (s.includes('cosmetics') || s.includes('perfumery') || s.includes('beauty')) return isCkb ? 'کۆزمەتیک و جوانکاری' : 'محل كوزمتك وعطور';
+                if (s.includes('tiles') || s.includes('ceramics') || s.includes('hardware') || s.includes('building')) return isCkb ? 'سیرامیک و کەرەستەی بیناسازی' : 'محل سيراميك ومواد بناء';
+                if (s.includes('clothes') || s.includes('fashion') || s.includes('shoes')) return isCkb ? 'جلوبەرگ و پێڵاو' : 'محل ملابس وأحذية';
+                if (s.includes('electronics') || s.includes('mobile') || s.includes('computer')) return isCkb ? 'ئەلیکترۆنیات و مۆبایل' : 'محل إلكترونيات وموبايل';
+                if (s.includes('furniture')) return isCkb ? 'مۆبیلیات' : 'معرض أثاث';
+                if (s.includes('jewelry')) return isCkb ? 'زەڕەنگەر' : 'صياغة ومجوهرات';
+                return isCkb ? `دووکان (${s || 'گشتی'})` : `محل تجاري (${s || 'متنوع'})`;
+            }
+
+            return isCkb ? 'شوێنی تۆمارکراو' : 'معلم مسجل';
+        }
+
         function renderPlacesDropdown(places) {
             const resultsBox = document.getElementById('search-results-box');
             if (!places || places.length === 0) {
-                resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-amber-300">${currentLang === 'ckb' ? 'هیچ شوێنێک لەم نزیکانە نەدۆزرایەوە.' : 'لا توجد أماكن مسجلة في هذا النطاق.'}</div>`;
+                resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-amber-300">${currentLang === 'ckb' ? 'هیچ شوێنێکی تۆمارکراو لەم نزیکانە نەدۆزرایەوە.' : 'لا توجد أماكن مسجلة مطابقة في هذا النطاق.'}</div>`;
                 return;
             }
 
             const refPoint = userCoords || [map.getCenter().lat, map.getCenter().lng];
             resultsBox.innerHTML = '';
 
-            places.forEach(place => {
+            places.forEach((place, idx) => {
                 const exactMeters = place.distMeters !== undefined ? place.distMeters : calculateExactGeodesicMeters(refPoint, [place.lat, place.lon]);
-                const formattedDist = formatExactDistance(exactMeters);
+                const formattedDist = formatExactDistanceWithFeet(exactMeters);
                 const btn = document.createElement('button');
                 btn.className = 'w-full text-right p-2.5 hover:bg-blue-600/25 transition flex items-center justify-between gap-2';
                 btn.innerHTML = `
-                    <div class="overflow-hidden">
-                        <div class="text-xs font-extrabold text-white truncate">${place.name}</div>
+                    <div class="overflow-hidden flex-1">
+                        <div class="text-xs font-extrabold text-white truncate"><span class="text-blue-400 mr-1">${idx + 1}.</span>${place.name}</div>
                         <div class="text-[10px] text-gray-400 truncate">${place.address}</div>
                     </div>
-                    <span class="text-[11px] font-extrabold text-emerald-400 shrink-0 bg-emerald-500/10 px-2 py-0.5 rounded-md">${formattedDist}</span>
+                    <span class="text-[10px] font-extrabold text-emerald-400 shrink-0 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">${formattedDist}</span>
                 `;
                 btn.onclick = () => {
                     resultsBox.classList.add('hidden');
@@ -1000,8 +1096,8 @@
                 clearBtn.classList.add('hidden');
                 startBtn.setAttribute('disabled', 'true');
                 listEl.innerHTML = `<div class="text-[11px] text-gray-400 bg-black/25 p-2 rounded-xl text-center">${i18n[currentLang].tapMap}</div>`;
-                document.getElementById('metric-dist').textContent = formatExactDistance(0);
-                document.getElementById('metric-geo-dist').textContent = formatExactDistance(0);
+                document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(0);
+                document.getElementById('metric-geo-dist').textContent = formatExactDistanceWithFeet(0);
                 document.getElementById('metric-time').textContent = formatDuration(0);
                 return;
             }
@@ -1069,7 +1165,7 @@
             for (let i = 0; i < allPoints.length - 1; i++) {
                 totalGeometricMeters += calculateExactGeodesicMeters(allPoints[i], allPoints[i + 1]);
             }
-            document.getElementById('metric-geo-dist').textContent = formatExactDistance(totalGeometricMeters);
+            document.getElementById('metric-geo-dist').textContent = formatExactDistanceWithFeet(totalGeometricMeters);
 
             // 2. Real Street Routing via OSRM across all waypoints
             const profileMap = { car: 'driving', bike: 'cycling', walk: 'foot' };
@@ -1096,7 +1192,7 @@
                             map.fitBounds(routePolyline.getBounds(), { padding: [75, 75] });
                         }
 
-                        document.getElementById('metric-dist').textContent = formatExactDistance(route.distance);
+                        document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(route.distance);
                         document.getElementById('metric-time').textContent = formatDuration(route.duration);
 
                         // Flatten all leg steps for continuous turn-by-turn guidance
@@ -1128,7 +1224,7 @@
 
             const speedsKmh = { walk: 4.5, bike: 15, car: 45 };
             const estSeconds = (totalGeometricMeters / 1000) / (speedsKmh[travelMode] || 40) * 3600;
-            document.getElementById('metric-dist').textContent = formatExactDistance(totalGeometricMeters);
+            document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(totalGeometricMeters);
             document.getElementById('metric-time').textContent = formatDuration(estSeconds);
         }
 
@@ -1271,10 +1367,23 @@
             return `${(meters / 1000).toFixed(2)} ${kmUnit}`;
         }
 
+        // Exact Geodesic Ruler Output in BOTH Meters/Km AND Feet (1 meter = 3.280839895 feet)
+        function formatExactDistanceWithFeet(meters) {
+            const exactFeet = Math.round(meters * 3.280839895);
+            const ftUnit = currentLang === 'ckb' ? 'فیت' : (currentLang === 'ar' || currentLang === 'fa' ? 'فيت' : 'ft');
+            const mUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'م' : 'm';
+            const kmUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'کم' : 'km';
+
+            if (meters < 1000) {
+                return `${Math.round(meters)} ${mUnit} (${exactFeet.toLocaleString()} ${ftUnit})`;
+            }
+            return `${(meters / 1000).toFixed(2)} ${kmUnit} (${exactFeet.toLocaleString()} ${ftUnit})`;
+        }
+
         function formatDuration(seconds) {
-            const minUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'د' : 'min';
-            const hrUnit = currentLang === 'ckb' ? 'ک' : (currentLang === 'ar' || currentLang === 'fa' ? 'س' : 'h');
-            const totalMins = Math.round(seconds / 60);
+            const minUnit = currentLang === 'ckb' ? 'خولەک' : (currentLang === 'ar' ? 'د' : (currentLang === 'fa' ? 'دقیقه' : 'min'));
+            const hrUnit = currentLang === 'ckb' ? 'کاتژمێر' : (currentLang === 'ar' ? 'س' : (currentLang === 'fa' ? 'ساعت' : 'h'));
+            const totalMins = Math.max(0, Math.round(seconds / 60));
             if (totalMins < 60) {
                 return `${totalMins} ${minUnit}`;
             }
@@ -1435,9 +1544,13 @@
             document.querySelector('[data-i18n="rotateTitle"]').textContent = dict.rotateTitle;
             document.querySelector('[data-i18n="categoriesTitle"]').textContent = dict.categoriesTitle;
             document.querySelector('[data-i18n="fuel"]').textContent = dict.fuel;
-            document.querySelector('[data-i18n="hospital"]').textContent = dict.hospital;
+            document.querySelector('[data-i18n="pharmacy"]').textContent = dict.pharmacy;
+            document.querySelector('[data-i18n="clinic"]').textContent = dict.clinic;
+            document.querySelector('[data-i18n="govHospital"]').textContent = dict.govHospital;
+            document.querySelector('[data-i18n="privateHospital"]').textContent = dict.privateHospital;
+            document.querySelector('[data-i18n="shopSpecial"]').textContent = dict.shopSpecial;
+            document.querySelector('[data-i18n="marketMall"]').textContent = dict.marketMall;
             document.querySelector('[data-i18n="food"]').textContent = dict.food;
-            document.querySelector('[data-i18n="shop"]').textContent = dict.shop;
             document.querySelector('[data-i18n="mosque"]').textContent = dict.mosque;
             document.querySelector('[data-i18n="alert"]').textContent = dict.alert;
             document.querySelector('[data-i18n="save"]').textContent = dict.save;
