@@ -3,51 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0f172a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>نظام الخرائط والملاحة الحقيقية</title>
+    <title>منصة الملاحة والخرائط الذكية</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Leaflet CSS & JS -->
+    <!-- Leaflet CSS & JS + Full 360° Map Rotation Plugin -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-
-    <!-- Leaflet Rotate Plugin (Full 360° Map Bearing & Touch Rotation) -->
     <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js" crossorigin=""></script>
 
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    <!-- Google Fonts: Vazirmatn & Noto Naskh Arabic (Full Kurdish Sorani Support: ۆ ێ ڕ ڵ ڤ گ چ ژ پ without broken letters) -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@500;600;700&family=Vazirmatn:wght@400;600;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Connected Kurdish Sorani (Vazirmatn & Noto Naskh Arabic) + Arabic/Latin Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@500;600;700&family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
+        * {
+            font-family: 'Vazirmatn', 'Noto Naskh Arabic', system-ui, -apple-system, sans-serif;
+            font-feature-settings: "liga" 1, "calt" 1;
+        }
         body {
-            font-family: 'Vazirmatn', 'Noto Naskh Arabic', 'Inter', sans-serif;
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #030712;
-            font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
-            text-rendering: optimizeLegibility;
         }
-        /* Numbered Waypoint Pin Style */
+        /* Numbered Waypoint Pin Style (Fixed Aspect Ratio & Anti-Distortion on Zoom/Rotate) */
+        .custom-wp-pin, .true-gps-marker, .local-hazard-pin {
+            background: transparent !important;
+            border: none !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
         .waypoint-pin {
-            width: 28px;
-            height: 28px;
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            min-height: 28px !important;
+            max-width: 28px !important;
+            max-height: 28px !important;
+            aspect-ratio: 1 / 1 !important;
+            flex-shrink: 0 !important;
+            box-sizing: border-box !important;
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: #ffffff;
             border: 2.5px solid #ffffff;
-            border-radius: 50%;
+            border-radius: 50% !important;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
             font-size: 12px;
+            line-height: 1;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+            transform-origin: center center;
+            backface-visibility: hidden;
         }
         .waypoint-pin.final-pin {
             background: linear-gradient(135deg, #059669, #047857);
@@ -58,7 +70,6 @@
             z-index: 1;
             background: #f8fafc;
         }
-        /* Clear, High-Detail Map Styling (Day Mode Default for 100% Readability of Streets & Landmarks) */
         .day-map .leaflet-tile-pane {
             filter: contrast(1.06) saturate(1.12);
         }
@@ -71,15 +82,20 @@
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.14);
         }
-        /* True Hardware GPS Blue Dot (Only shown when real satellite coordinates arrive) */
+        /* True Hardware GPS Blue Dot (Locked 1:1 Circle During Zoom & Rotation) */
         .gps-blue-dot {
-            width: 20px;
-            height: 20px;
+            width: 20px !important;
+            height: 20px !important;
+            min-width: 20px !important;
+            min-height: 20px !important;
+            aspect-ratio: 1 / 1 !important;
+            box-sizing: border-box !important;
             background: #2563eb;
             border: 3.5px solid #ffffff;
-            border-radius: 50%;
+            border-radius: 50% !important;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6), 0 0 0 0 rgba(37, 99, 235, 0.7);
             animation: gpsPulse 2s infinite;
+            transform-origin: center center;
         }
         @keyframes gpsPulse {
             0% { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6), 0 0 0 0 rgba(37, 99, 235, 0.7); }
@@ -91,7 +107,6 @@
             background: rgba(15, 23, 42, 0.75) !important;
             color: #cbd5e1 !important;
         }
-        /* Hide default Leaflet rotate button so we use our custom 360° compass box */
         .leaflet-control-rotate {
             display: none !important;
         }
@@ -267,15 +282,15 @@
                     <div class="grid grid-cols-3 gap-1.5 bg-black/35 p-2 rounded-xl text-center border border-white/5">
                         <div>
                             <div class="text-[9px] text-gray-400 font-bold" data-i18n="roadDistLabel">مسافة الطريق</div>
-                            <div class="text-[11px] font-extrabold text-blue-400 mt-0.5 leading-tight" id="metric-dist">0 م / 0 ft</div>
-                        </div>
-                        <div class="border-x border-white/10">
-                            <div class="text-[9px] text-gray-400 font-bold" data-i18n="geoDistLabel">مسطرة هندسية</div>
-                            <div class="text-[11px] font-extrabold text-cyan-400 mt-0.5 leading-tight" id="metric-geo-dist">0 م / 0 ft</div>
-                        </div>
+                    <!-- Clean Street Distance & Exact Duration Summary (Dynamic per Car / Walk / Bike) -->
+                    <div class="grid grid-cols-2 gap-2 bg-black/35 p-2.5 rounded-xl text-center border border-white/5">
                         <div>
-                            <div class="text-[9px] text-gray-400 font-bold" data-i18n="timeLabel">الوقت المقدر</div>
-                            <div class="text-[11px] font-extrabold text-emerald-400 mt-0.5 leading-tight" id="metric-time">0 د</div>
+                            <div class="text-[10px] text-gray-400 font-bold" data-i18n="roadDistLabel">مسافة الطريق</div>
+                            <div class="text-xs font-extrabold text-blue-400 mt-0.5 leading-tight" id="metric-dist">0 م (0 فيت)</div>
+                        </div>
+                        <div class="border-r border-white/10">
+                            <div class="text-[10px] text-gray-400 font-bold" data-i18n="timeLabel">الوقت المقدر</div>
+                            <div class="text-xs font-extrabold text-emerald-400 mt-0.5 leading-tight" id="metric-time">0 د</div>
                         </div>
                     </div>
                 </div>
@@ -372,7 +387,6 @@
                 clearAll: 'سڕینەوەی هەمووی',
                 tapMap: 'پەنجە بنێ بە نەخشەکەدا یان بگەڕێ بۆ دیاریکردنی شوێن',
                 roadDistLabel: 'دووری ڕێگا',
-                geoDistLabel: 'ڕاستە هێڵ (مەتر/فیت)',
                 timeLabel: 'کاتی خەمڵێنراو',
                 startNav: 'دەستپێکردنی ڕێنمایی',
                 arrived: 'گەیشتیتە شوێنی مەبەست!',
@@ -407,7 +421,6 @@
                 clearAll: 'مسح الكل',
                 tapMap: 'اضغط على أي نقطة في الخريطة أو ابحث لإضافة وجهة',
                 roadDistLabel: 'مسافة الطريق',
-                geoDistLabel: 'مسطرة هندسية',
                 timeLabel: 'الوقت المقدر',
                 startNav: 'ابدأ التوجيه',
                 arrived: 'لقد وصلت إلى وجهتك بدقة!',
@@ -441,8 +454,7 @@
                 waypointsTitle: 'Selected Destinations (Tap map to add):',
                 clearAll: 'Clear All',
                 tapMap: 'Tap anywhere on the map or search to add destination',
-                roadDistLabel: 'Road Dist.',
-                geoDistLabel: 'Exact Ruler',
+                roadDistLabel: 'Road Distance',
                 timeLabel: 'Est. Time',
                 startNav: 'Start Navigation',
                 arrived: 'You have arrived at your destination!',
@@ -477,7 +489,6 @@
                 clearAll: 'Tümünü Sil',
                 tapMap: 'Hedef eklemek için haritaya dokunun veya arayın',
                 roadDistLabel: 'Yol Mesafesi',
-                geoDistLabel: 'Hassas Cetvel',
                 timeLabel: 'Tahmini Süre',
                 startNav: 'Navigasyonu Başlat',
                 arrived: 'Hedefinize ulaştınız!',
@@ -512,7 +523,6 @@
                 clearAll: 'پاک کردن همه',
                 tapMap: 'برای افزودن مقصد روی نقشه ضربه بزنید یا جستجو کنید',
                 roadDistLabel: 'مسافت جاده',
-                geoDistLabel: 'خط‌کش هندسی',
                 timeLabel: 'زمان تخمینی',
                 startNav: 'شروع مسیریابی',
                 arrived: 'شما به مقصد رسیدید!',
@@ -569,41 +579,47 @@
             }
         }
 
-        // Offline-capable OpenStreetMap Tile Layer
-        const OfflineCachedTileLayer = L.TileLayer.extend({
-            createTile: function(coords, done) {
-                const tile = document.createElement('img');
-                tile.alt = '';
-                tile.setAttribute('role', 'presentation');
-                const url = this.getTileUrl(coords);
+        function createOfflineTileLayer(urlTemplate, options) {
+            const CustomLayer = L.TileLayer.extend({
+                createTile: function(coords, done) {
+                    const tile = document.createElement('img');
+                    tile.alt = '';
+                    tile.setAttribute('role', 'presentation');
+                    const url = this.getTileUrl(coords);
 
-                if ('caches' in window) {
-                    caches.open(OFFLINE_TILE_CACHE).then(cache => {
-                        cache.match(url).then(matchedResponse => {
-                            if (matchedResponse) {
-                                matchedResponse.blob().then(blob => {
-                                    tile.src = URL.createObjectURL(blob);
-                                    done(null, tile);
-                                });
-                            } else {
-                                tile.src = url;
-                                tile.onload = () => done(null, tile);
-                                tile.onerror = (e) => done(e, tile);
-                            }
+                    if ('caches' in window) {
+                        caches.open(OFFLINE_TILE_CACHE).then(cache => {
+                            cache.match(url).then(matchedResponse => {
+                                if (matchedResponse) {
+                                    matchedResponse.blob().then(blob => {
+                                        tile.src = URL.createObjectURL(blob);
+                                        done(null, tile);
+                                    });
+                                } else {
+                                    tile.src = url;
+                                    tile.onload = () => done(null, tile);
+                                    tile.onerror = (e) => done(e, tile);
+                                }
+                            });
+                        }).catch(() => {
+                            tile.src = url;
+                            tile.onload = () => done(null, tile);
                         });
-                    }).catch(() => {
+                    } else {
                         tile.src = url;
                         tile.onload = () => done(null, tile);
-                    });
-                } else {
-                    tile.src = url;
-                    tile.onload = () => done(null, tile);
+                    }
+                    return tile;
                 }
-                return tile;
-            }
-        });
+            });
+            return new CustomLayer(urlTemplate, options);
+        }
 
         window.onload = function() {
+            if (typeof L === 'undefined') {
+                showTopPill('تعذر تحميل مكتبة الخرائط، يرجى تحديث الصفحة', 'fa-solid fa-triangle-exclamation text-rose-400', 5000);
+                return;
+            }
             setupServiceWorker();
             initMap();
             loadSavedLocalHazards();
@@ -621,7 +637,7 @@
             }).setView(initialView, 15);
 
             // High-clarity OpenStreetMap tiles (100% real streets, buildings, shops, landmarks)
-            new OfflineCachedTileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            createOfflineTileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; OpenStreetMap'
             }).addTo(map);
@@ -635,6 +651,14 @@
                 document.getElementById('rotation-slider').value = bearing;
                 document.getElementById('bearing-deg-val').textContent = `${bearing}°`;
                 document.getElementById('compass-needle-icon').style.transform = `rotate(${bearing}deg)`;
+            });
+
+            // Keep all pinned markers perfectly anchored & crisp on every zoom level
+            map.on('zoomend moveend', function() {
+                if (userMarker && userCoords) userMarker.setLatLng(userCoords);
+                waypoints.forEach(wp => {
+                    if (wp.marker && wp.coords) wp.marker.setLatLng(wp.coords);
+                });
             });
 
             // Click anywhere on map to add a real destination waypoint
@@ -1097,7 +1121,6 @@
                 startBtn.setAttribute('disabled', 'true');
                 listEl.innerHTML = `<div class="text-[11px] text-gray-400 bg-black/25 p-2 rounded-xl text-center">${i18n[currentLang].tapMap}</div>`;
                 document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(0);
-                document.getElementById('metric-geo-dist').textContent = formatExactDistanceWithFeet(0);
                 document.getElementById('metric-time').textContent = formatDuration(0);
                 return;
             }
@@ -1159,72 +1182,94 @@
 
             const startPoint = userCoords || [map.getCenter().lat, map.getCenter().lng];
             const allPoints = [startPoint, ...waypoints.map(w => w.coords)];
-
-            // 1. Exact Geometric (Geodesic WGS-84) Cumulative Distance across all stops
-            let totalGeometricMeters = 0;
-            for (let i = 0; i < allPoints.length - 1; i++) {
-                totalGeometricMeters += calculateExactGeodesicMeters(allPoints[i], allPoints[i + 1]);
-            }
-            document.getElementById('metric-geo-dist').textContent = formatExactDistanceWithFeet(totalGeometricMeters);
-
-            // 2. Real Street Routing via OSRM across all waypoints
-            const profileMap = { car: 'driving', bike: 'cycling', walk: 'foot' };
-            const profile = profileMap[travelMode] || 'driving';
             const coordsPath = allPoints.map(p => `${p[1]},${p[0]}`).join(';');
 
-            try {
-                const url = `https://router.project-osrm.org/route/v1/${profile}/${coordsPath}?overview=full&geometries=geojson&steps=true`;
-                const res = await fetch(url);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-                        const route = data.routes[0];
-                        const latLngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
+            document.getElementById('metric-dist').innerHTML = `<i class="fa-solid fa-spinner animate-spin text-blue-400"></i>`;
+            document.getElementById('metric-time').innerHTML = `<i class="fa-solid fa-spinner animate-spin text-emerald-400"></i>`;
 
-                        routePolyline = L.polyline(latLngs, {
-                            color: '#2563eb',
-                            weight: 6,
-                            opacity: 0.92,
-                            lineJoin: 'round'
-                        }).addTo(map);
+            // Dedicated routing endpoints per travel mode so car, bike, and walk follow true distinct paths & speeds
+            const routingEndpoints = {
+                car: `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true`,
+                bike: `https://routing.openstreetmap.de/routed-bike/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true`,
+                walk: `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true`
+            };
+            const fallbackProfile = { car: 'driving', bike: 'cycling', walk: 'foot' }[travelMode] || 'driving';
+            const fallbackUrl = `https://router.project-osrm.org/route/v1/${fallbackProfile}/${coordsPath}?overview=full&geometries=geojson&steps=true`;
 
-                        if (!isNavigating) {
-                            map.fitBounds(routePolyline.getBounds(), { padding: [75, 75] });
+            const routeColors = { car: '#2563eb', bike: '#8b5cf6', walk: '#10b981' };
+            const routeColor = routeColors[travelMode] || '#2563eb';
+
+            const urlsToTry = [routingEndpoints[travelMode], fallbackUrl];
+
+            for (const url of urlsToTry) {
+                try {
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                            const route = data.routes[0];
+                            const latLngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+                            routePolyline = L.polyline(latLngs, {
+                                color: routeColor,
+                                weight: 6,
+                                opacity: 0.92,
+                                dashArray: travelMode === 'walk' ? '6, 8' : null,
+                                lineJoin: 'round'
+                            }).addTo(map);
+
+                            if (!isNavigating) {
+                                map.fitBounds(routePolyline.getBounds(), { padding: [75, 75] });
+                            }
+
+                            // Exact road path distance (sum of legs for zero rounding drift) & exact realistic travel time
+                            const exactRoadMeters = (route.legs || []).reduce((sum, leg) => sum + (leg.distance || 0), 0) || route.distance;
+                            let exactDurationSeconds = (route.legs || []).reduce((sum, leg) => sum + (leg.duration || 0), 0) || route.duration;
+
+                            // Ensure realistic urban speed calibration if server returns generic driving speed
+                            if (url === fallbackUrl) {
+                                if (travelMode === 'walk') exactDurationSeconds = exactRoadMeters / 1.35; // ~4.86 km/h real walking pace
+                                else if (travelMode === 'bike') exactDurationSeconds = exactRoadMeters / 4.2; // ~15.1 km/h real cycling pace
+                            }
+
+                            document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(exactRoadMeters);
+                            document.getElementById('metric-time').textContent = formatDuration(exactDurationSeconds);
+
+                            // Flatten all leg steps for continuous turn-by-turn guidance
+                            routeSteps = [];
+                            (route.legs || []).forEach(leg => {
+                                if (leg.steps) routeSteps.push(...leg.steps);
+                            });
+                            currentStepIndex = 0;
+
+                            const summaryBar = document.getElementById('route-summary-bar');
+                            const finalName = waypoints[waypoints.length - 1].name;
+                            const mainRoad = route.legs?.[0]?.summary || finalName;
+                            document.getElementById('route-summary-text').textContent = `${currentLang === 'ckb' ? 'ڕێگا:' : 'عبر:'} ${mainRoad}`;
+                            summaryBar.classList.remove('hidden');
+
+                            updateStepBanner();
+                            return;
                         }
-
-                        document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(route.distance);
-                        document.getElementById('metric-time').textContent = formatDuration(route.duration);
-
-                        // Flatten all leg steps for continuous turn-by-turn guidance
-                        routeSteps = [];
-                        (route.legs || []).forEach(leg => {
-                            if (leg.steps) routeSteps.push(...leg.steps);
-                        });
-                        currentStepIndex = 0;
-
-                        const summaryBar = document.getElementById('route-summary-bar');
-                        const finalName = waypoints[waypoints.length - 1].name;
-                        const mainRoad = route.legs?.[0]?.summary || finalName;
-                        document.getElementById('route-summary-text').textContent = `${currentLang === 'ckb' ? 'ڕێگا:' : 'عبر:'} ${mainRoad}`;
-                        summaryBar.classList.remove('hidden');
-
-                        updateStepBanner();
-                        return;
                     }
-                }
-            } catch (e) {}
+                } catch (e) {}
+            }
 
-            // Fallback: Exact Geodesic Polyline if OSRM server is temporarily unreachable
+            // Fallback only if all online routing servers fail
+            let totalDirectMeters = 0;
+            for (let i = 0; i < allPoints.length - 1; i++) {
+                totalDirectMeters += calculateExactGeodesicMeters(allPoints[i], allPoints[i + 1]);
+            }
             routePolyline = L.polyline(allPoints, {
-                color: '#3b82f6',
+                color: routeColor,
                 weight: 5,
                 opacity: 0.85,
                 dashArray: '10, 10'
             }).addTo(map);
 
-            const speedsKmh = { walk: 4.5, bike: 15, car: 45 };
-            const estSeconds = (totalGeometricMeters / 1000) / (speedsKmh[travelMode] || 40) * 3600;
-            document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(totalGeometricMeters);
+            const speedsMs = { walk: 1.35, bike: 4.2, car: 11.1 };
+            const estSeconds = totalDirectMeters / (speedsMs[travelMode] || 11.1);
+            document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(totalDirectMeters);
             document.getElementById('metric-time').textContent = formatDuration(estSeconds);
         }
 
@@ -1362,28 +1407,34 @@
             const mUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'م' : 'm';
             const kmUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'کم' : 'km';
             if (meters < 1000) {
-                return `${Math.round(meters)} ${mUnit}`;
+                return `${meters.toFixed(1)} ${mUnit}`;
             }
-            return `${(meters / 1000).toFixed(2)} ${kmUnit}`;
+            return `${(meters / 1000).toFixed(3)} ${kmUnit}`;
         }
 
-        // Exact Geodesic Ruler Output in BOTH Meters/Km AND Feet (1 meter = 3.280839895 feet)
+        // Exact Road Distance in BOTH Meters/Km AND Feet (1 meter = 3.280839895 feet) with zero rounding loss
         function formatExactDistanceWithFeet(meters) {
-            const exactFeet = Math.round(meters * 3.280839895);
+            const exactFeet = meters * 3.280839895;
             const ftUnit = currentLang === 'ckb' ? 'فیت' : (currentLang === 'ar' || currentLang === 'fa' ? 'فيت' : 'ft');
             const mUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'م' : 'm';
             const kmUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'کم' : 'km';
 
-            if (meters < 1000) {
-                return `${Math.round(meters)} ${mUnit} (${exactFeet.toLocaleString()} ${ftUnit})`;
+            if (meters === 0) {
+                return `0 ${mUnit} (0 ${ftUnit})`;
             }
-            return `${(meters / 1000).toFixed(2)} ${kmUnit} (${exactFeet.toLocaleString()} ${ftUnit})`;
+            if (meters < 1000) {
+                return `${meters.toFixed(1)} ${mUnit} (${Math.round(exactFeet).toLocaleString()} ${ftUnit})`;
+            }
+            return `${(meters / 1000).toFixed(3)} ${kmUnit} (${Math.round(exactFeet).toLocaleString()} ${ftUnit})`;
         }
 
         function formatDuration(seconds) {
+            const secUnit = currentLang === 'ckb' ? 'چرکە' : (currentLang === 'ar' ? 'ث' : (currentLang === 'fa' ? 'ثانیه' : 's'));
             const minUnit = currentLang === 'ckb' ? 'خولەک' : (currentLang === 'ar' ? 'د' : (currentLang === 'fa' ? 'دقیقه' : 'min'));
             const hrUnit = currentLang === 'ckb' ? 'کاتژمێر' : (currentLang === 'ar' ? 'س' : (currentLang === 'fa' ? 'ساعت' : 'h'));
-            const totalMins = Math.max(0, Math.round(seconds / 60));
+            if (seconds <= 0) return `0 ${minUnit}`;
+            if (seconds < 60) return `${Math.round(seconds)} ${secUnit}`;
+            const totalMins = Math.round(seconds / 60);
             if (totalMins < 60) {
                 return `${totalMins} ${minUnit}`;
             }
@@ -1561,7 +1612,6 @@
             document.querySelector('[data-i18n="waypointsTitle"]').textContent = dict.waypointsTitle;
             document.querySelector('[data-i18n="clearAll"]').textContent = dict.clearAll;
             document.querySelector('[data-i18n="roadDistLabel"]').textContent = dict.roadDistLabel;
-            document.querySelector('[data-i18n="geoDistLabel"]').textContent = dict.geoDistLabel;
             document.querySelector('[data-i18n="timeLabel"]').textContent = dict.timeLabel;
             document.querySelector('[data-i18n="reportTitle"]').textContent = dict.reportTitle;
             document.querySelector('[data-i18n="traffic"]').textContent = dict.traffic;
