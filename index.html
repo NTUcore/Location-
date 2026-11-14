@@ -110,6 +110,10 @@
         .leaflet-control-rotate {
             display: none !important;
         }
+        /* Lock SVG Route Path & Crisp Rendering During Zoom/Rotate */
+        .leaflet-overlay-pane svg {
+            shape-rendering: geometricPrecision;
+        }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -278,11 +282,7 @@
                         <div class="text-[11px] text-gray-400 bg-black/25 p-2 rounded-xl text-center" id="empty-waypoints-msg" data-i18n="tapMap">اضغط على أي نقطة في الخريطة أو ابحث لإضافة وجهة</div>
                     </div>
 
-                    <!-- Exact Geometric & Street Distance Summary (Meters + Feet Precision) -->
-                    <div class="grid grid-cols-3 gap-1.5 bg-black/35 p-2 rounded-xl text-center border border-white/5">
-                        <div>
-                            <div class="text-[9px] text-gray-400 font-bold" data-i18n="roadDistLabel">مسافة الطريق</div>
-                    <!-- Clean Street Distance & Exact Duration Summary (Dynamic per Car / Walk / Bike) -->
+                    <!-- Clean Street Distance & Realistic Duration Summary (Dynamic per Car / Walk / Bike) -->
                     <div class="grid grid-cols-2 gap-2 bg-black/35 p-2.5 rounded-xl text-center border border-white/5">
                         <div>
                             <div class="text-[10px] text-gray-400 font-bold" data-i18n="roadDistLabel">مسافة الطريق</div>
@@ -628,12 +628,16 @@
 
         function initMap() {
             // Initialize Leaflet with Full 360° Rotation & Two-Finger Touch Rotate enabled
+            // Disable zoomAnimation/markerZoomAnimation so the blue route line & pin stay 100% locked to the street with zero drift
             map = L.map('map', {
                 zoomControl: false,
                 rotate: true,
                 touchRotate: true,
                 rotateControl: false,
-                bearing: 0
+                bearing: 0,
+                zoomAnimation: false,
+                markerZoomAnimation: false,
+                fadeAnimation: false
             }).setView(initialView, 15);
 
             // High-clarity OpenStreetMap tiles (100% real streets, buildings, shops, landmarks)
@@ -653,12 +657,15 @@
                 document.getElementById('compass-needle-icon').style.transform = `rotate(${bearing}deg)`;
             });
 
-            // Keep all pinned markers perfectly anchored & crisp on every zoom level
-            map.on('zoomend moveend', function() {
+            // Keep all pinned markers & blue route polyline 100% anchored to exact street coordinates on every zoom/rotate
+            map.on('zoom zoomend moveend rotate', function() {
                 if (userMarker && userCoords) userMarker.setLatLng(userCoords);
                 waypoints.forEach(wp => {
                     if (wp.marker && wp.coords) wp.marker.setLatLng(wp.coords);
                 });
+                if (routePolyline && typeof routePolyline.redraw === 'function') {
+                    routePolyline.redraw();
+                }
             });
 
             // Click anywhere on map to add a real destination waypoint
@@ -1187,19 +1194,26 @@
             document.getElementById('metric-dist').innerHTML = `<i class="fa-solid fa-spinner animate-spin text-blue-400"></i>`;
             document.getElementById('metric-time').innerHTML = `<i class="fa-solid fa-spinner animate-spin text-emerald-400"></i>`;
 
-            // Dedicated routing endpoints per travel mode so car, bike, and walk follow true distinct paths & speeds
-            const routingEndpoints = {
-                car: `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true`,
-                bike: `https://routing.openstreetmap.de/routed-bike/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true`,
-                walk: `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true`
+            // Dedicated routing engines per travel mode (uses pedestrian alleys for walk, cycleways for bike, and street rules for car)
+            // alternatives=true fetches alternative branches so we always select the fastest arrival branch
+            const routingCandidates = {
+                car: [
+                    `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
+                    `https://router.project-osrm.org/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
+                ],
+                bike: [
+                    `https://routing.openstreetmap.de/routed-bike/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
+                    `https://router.project-osrm.org/route/v1/cycling/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
+                ],
+                walk: [
+                    `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
+                    `https://router.project-osrm.org/route/v1/foot/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
+                ]
             };
-            const fallbackProfile = { car: 'driving', bike: 'cycling', walk: 'foot' }[travelMode] || 'driving';
-            const fallbackUrl = `https://router.project-osrm.org/route/v1/${fallbackProfile}/${coordsPath}?overview=full&geometries=geojson&steps=true`;
 
             const routeColors = { car: '#2563eb', bike: '#8b5cf6', walk: '#10b981' };
             const routeColor = routeColors[travelMode] || '#2563eb';
-
-            const urlsToTry = [routingEndpoints[travelMode], fallbackUrl];
+            const urlsToTry = routingCandidates[travelMode] || routingCandidates.car;
 
             for (const url of urlsToTry) {
                 try {
@@ -1207,45 +1221,78 @@
                     if (res.ok) {
                         const data = await res.json();
                         if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-                            const route = data.routes[0];
-                            const latLngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
+                            // Pick the fastest arrival route/branch (lowest duration, then shortest path)
+                            const fastestRoute = data.routes.reduce((best, curr) => {
+                                if ((curr.duration || Infinity) < (best.duration || Infinity)) return curr;
+                                if (curr.duration === best.duration && (curr.distance || Infinity) < (best.distance || Infinity)) return curr;
+                                return best;
+                            }, data.routes[0]);
+
+                            const latLngs = fastestRoute.geometry.coordinates.map(c => [c[1], c[0]]);
+
+                            // Ensure the drawn blue line starts at the exact start point and ends at the exact pinned destination (zero gap)
+                            if (latLngs.length > 0) {
+                                latLngs[0] = [startPoint[0], startPoint[1]];
+                                latLngs[latLngs.length - 1] = [waypoints[waypoints.length - 1].coords[0], waypoints[waypoints.length - 1].coords[1]];
+                            }
 
                             routePolyline = L.polyline(latLngs, {
                                 color: routeColor,
                                 weight: 6,
                                 opacity: 0.92,
                                 dashArray: travelMode === 'walk' ? '6, 8' : null,
-                                lineJoin: 'round'
+                                lineJoin: 'round',
+                                lineCap: 'round',
+                                smoothFactor: 0,
+                                noClip: true
                             }).addTo(map);
 
                             if (!isNavigating) {
                                 map.fitBounds(routePolyline.getBounds(), { padding: [75, 75] });
                             }
 
-                            // Exact road path distance (sum of legs for zero rounding drift) & exact realistic travel time
-                            const exactRoadMeters = (route.legs || []).reduce((sum, leg) => sum + (leg.distance || 0), 0) || route.distance;
-                            let exactDurationSeconds = (route.legs || []).reduce((sum, leg) => sum + (leg.duration || 0), 0) || route.duration;
-
-                            // Ensure realistic urban speed calibration if server returns generic driving speed
-                            if (url === fallbackUrl) {
-                                if (travelMode === 'walk') exactDurationSeconds = exactRoadMeters / 1.35; // ~4.86 km/h real walking pace
-                                else if (travelMode === 'bike') exactDurationSeconds = exactRoadMeters / 4.2; // ~15.1 km/h real cycling pace
+                            // Compute exact sub-millimeter geodesic length along every segment of the drawn road polyline
+                            let exactPolylineMeters = 0;
+                            for (let i = 0; i < latLngs.length - 1; i++) {
+                                exactPolylineMeters += calculateExactGeodesicMeters(latLngs[i], latLngs[i + 1]);
+                            }
+                            if (exactPolylineMeters <= 0) {
+                                exactPolylineMeters = (fastestRoute.legs || []).reduce((sum, leg) => sum + (leg.distance || 0), 0) || fastestRoute.distance;
                             }
 
-                            document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(exactRoadMeters);
-                            document.getElementById('metric-time').textContent = formatDuration(exactDurationSeconds);
-
-                            // Flatten all leg steps for continuous turn-by-turn guidance
+                            // Count turns & intersections from steps for realistic urban stop/slowdown calculation
                             routeSteps = [];
-                            (route.legs || []).forEach(leg => {
+                            (fastestRoute.legs || []).forEach(leg => {
                                 if (leg.steps) routeSteps.push(...leg.steps);
                             });
+                            const turnCount = Math.max(0, routeSteps.length - 2);
+
+                            // Realistic, natural duration calculation calibrated for real-world movement:
+                            // - Walk: natural human walking pace 4.5 km/h (1.25 m/s) + 4s per street crossing
+                            // - Bike: natural urban cycling pace 14.0 km/h (3.89 m/s) + 6s per junction
+                            // - Car: real road segment speeds from OSRM calibrated for urban traffic & intersections (+10s per turn)
+                            let realisticDurationSeconds = 0;
+                            if (travelMode === 'walk') {
+                                realisticDurationSeconds = (exactPolylineMeters / 1.25) + (turnCount * 4);
+                            } else if (travelMode === 'bike') {
+                                realisticDurationSeconds = (exactPolylineMeters / 3.89) + (turnCount * 6);
+                            } else {
+                                const serverCarSec = (fastestRoute.legs || []).reduce((sum, leg) => sum + (leg.duration || 0), 0) || fastestRoute.duration;
+                                // Realistic urban car pace (accounts for speed limits, traffic flow, and intersections)
+                                const urbanBaselineSec = (exactPolylineMeters / 9.72) + (turnCount * 10); // ~35 km/h effective urban average
+                                realisticDurationSeconds = Math.max(serverCarSec * 1.15, urbanBaselineSec);
+                            }
+
+                            document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(exactPolylineMeters);
+                            document.getElementById('metric-time').textContent = formatDuration(realisticDurationSeconds);
+
                             currentStepIndex = 0;
 
                             const summaryBar = document.getElementById('route-summary-bar');
                             const finalName = waypoints[waypoints.length - 1].name;
-                            const mainRoad = route.legs?.[0]?.summary || finalName;
-                            document.getElementById('route-summary-text').textContent = `${currentLang === 'ckb' ? 'ڕێگا:' : 'عبر:'} ${mainRoad}`;
+                            const mainRoad = fastestRoute.legs?.[0]?.summary || finalName;
+                            const fastTag = currentLang === 'ckb' ? 'خێراترین ڕێگا:' : 'أسرع طريق:';
+                            document.getElementById('route-summary-text').textContent = `${fastTag} ${mainRoad}`;
                             summaryBar.classList.remove('hidden');
 
                             updateStepBanner();
@@ -1267,8 +1314,8 @@
                 dashArray: '10, 10'
             }).addTo(map);
 
-            const speedsMs = { walk: 1.35, bike: 4.2, car: 11.1 };
-            const estSeconds = totalDirectMeters / (speedsMs[travelMode] || 11.1);
+            const speedsMs = { walk: 1.25, bike: 3.89, car: 9.72 };
+            const estSeconds = totalDirectMeters / (speedsMs[travelMode] || 9.72);
             document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(totalDirectMeters);
             document.getElementById('metric-time').textContent = formatDuration(estSeconds);
         }
