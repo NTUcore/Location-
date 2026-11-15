@@ -1,1863 +1,532 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ku" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>منصة الملاحة والخرائط الذكية</title>
-
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Leaflet CSS & JS + Full 360° Map Rotation Plugin -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js" crossorigin=""></script>
-
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <!-- Connected Kurdish Sorani (Vazirmatn & Noto Naskh Arabic) + Arabic/Latin Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@500;600;700&family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-
+    <title>RêberAI Pro — خرائط وملاحة كركوك المتقدمة</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Google Fonts / Vazirmatn & Noto Naskh Arabic -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
+    
     <style>
         * {
-            font-family: 'Vazirmatn', 'Noto Naskh Arabic', system-ui, -apple-system, sans-serif;
-            font-feature-settings: "liga" 1, "calt" 1;
-        }
-        body {
+            box-sizing: border-box;
+            font-family: 'Vazirmatn', 'Noto Naskh Arabic', sans-serif;
             margin: 0;
             padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
             overflow: hidden;
+            background: #0f172a;
         }
-        /* Numbered Waypoint Pin Style (Fixed Aspect Ratio & Anti-Distortion on Zoom/Rotate) */
-        .custom-wp-pin, .true-gps-marker, .local-hazard-pin {
-            background: transparent !important;
-            border: none !important;
-            display: flex !important;
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        /* Right Control Panel */
+        .control-panel {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 360px;
+            max-height: calc(100vh - 30px);
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+        }
+        .panel-header {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
         }
-        .waypoint-pin {
-            width: 28px !important;
-            height: 28px !important;
-            min-width: 28px !important;
-            min-height: 28px !important;
-            max-width: 28px !important;
-            max-height: 28px !important;
-            aspect-ratio: 1 / 1 !important;
-            flex-shrink: 0 !important;
-            box-sizing: border-box !important;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #ffffff;
-            border: 2.5px solid #ffffff;
-            border-radius: 50% !important;
+        .panel-body {
+            padding: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .panel-body::-webkit-scrollbar {
+            width: 5px;
+        }
+        .panel-body::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
+            gap: 8px;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+        .btn:hover { background: #1d4ed8; }
+        .btn-secondary { background: #334155; }
+        .btn-secondary:hover { background: #475569; }
+        .btn-danger { background: #dc2626; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-success { background: #16a34a; }
+        .btn-success:hover { background: #15803d; }
+        
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+        input:focus { border-color: #3b82f6; }
+        
+        .grid-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .status-box {
+            background: rgba(30, 41, 59, 0.9);
+            padding: 10px;
+            border-radius: 10px;
+            color: #cbd5e1;
+            font-size: 13px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            height: 120px;
+            overflow-y: auto;
+            background: #020617;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .chat-msg {
             font-size: 12px;
-            line-height: 1;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
-            transform-origin: center center;
-            backface-visibility: hidden;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: #1e293b;
+            color: #f8fafc;
         }
-        .waypoint-pin.final-pin {
-            background: linear-gradient(135deg, #059669, #047857);
+        .chat-msg.me {
+            background: #1e40af;
+            text-align: left;
         }
-        #map {
-            height: 100vh;
-            width: 100vw;
-            z-index: 1;
-            background: #f8fafc;
+        @media(max-width: 768px) {
+            .control-panel {
+                width: 100%;
+                height: 52vh;
+                top: auto;
+                bottom: 0;
+                right: 0;
+                border-radius: 20px 20px 0 0;
+            }
         }
-        .day-map .leaflet-tile-pane {
-            filter: contrast(1.06) saturate(1.12);
-        }
-        .dark-map .leaflet-tile-pane {
-            filter: invert(100%) hue-rotate(180deg) brightness(94%) contrast(94%) saturate(88%);
-        }
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.92);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-        }
-        /* True Hardware GPS Blue Dot (Locked 1:1 Circle During Zoom & Rotation) */
-        .gps-blue-dot {
-            width: 20px !important;
-            height: 20px !important;
-            min-width: 20px !important;
-            min-height: 20px !important;
-            aspect-ratio: 1 / 1 !important;
-            box-sizing: border-box !important;
-            background: #2563eb;
-            border: 3.5px solid #ffffff;
-            border-radius: 50% !important;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6), 0 0 0 0 rgba(37, 99, 235, 0.7);
-            animation: gpsPulse 2s infinite;
-            transform-origin: center center;
-        }
-        @keyframes gpsPulse {
-            0% { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6), 0 0 0 0 rgba(37, 99, 235, 0.7); }
-            70% { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6), 0 0 0 16px rgba(37, 99, 235, 0); }
-            100% { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6), 0 0 0 0 rgba(37, 99, 235, 0); }
-        }
-        .leaflet-control-attribution {
-            font-size: 9px !important;
-            background: rgba(15, 23, 42, 0.75) !important;
-            color: #cbd5e1 !important;
-        }
-        .leaflet-control-rotate {
-            display: none !important;
-        }
-        /* Lock SVG Route Path & Crisp Rendering During Zoom/Rotate */
-        .leaflet-overlay-pane svg {
-            shape-rendering: geometricPrecision;
-        }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gray-950 text-white relative select-none">
+<body>
 
-    <!-- Full-Screen Unobstructed Map Container -->
-    <div id="map" class="day-map"></div>
+    <div id="map"></div>
 
-    <!-- Non-Blocking Top Status Pill -->
-    <div id="top-pill-notification" class="fixed top-3 left-4 z-50 pointer-events-none transition-all duration-300 opacity-0 -translate-y-4">
-        <div class="glass-panel px-4 py-2 rounded-full shadow-2xl border border-blue-500/40 flex items-center gap-2 text-xs font-bold text-white whitespace-nowrap">
-            <span id="pill-icon" class="text-blue-400"><i class="fa-solid fa-location-dot"></i></span>
-            <span id="pill-msg">جاري التحديث...</span>
+    <div class="control-panel" id="controlPanel">
+        <div class="panel-header">
+            <span>RêberAI Pro — كركوك</span>
+            <button class="btn btn-secondary" onclick="togglePanel()" style="padding: 4px 8px; font-size: 12px;">إغلاق</button>
         </div>
-    </div>
+        <div class="panel-body">
+            <!-- GPS & Location -->
+            <button class="btn" onclick="locateUser()">📍 تحديد موقعي الحالي بدقة (GPS)</button>
+            <div id="gpsStatus" class="status-box">في انتظار تفعيل الـ GPS الحقيقي...</div>
 
-    <!-- Active Turn-by-Turn Navigation Banner (Top-Left so Right Box stays clean) -->
-    <div id="nav-banner" class="hidden fixed top-4 left-4 z-20 max-w-sm">
-        <div class="bg-gradient-to-r from-emerald-600 to-teal-700 p-3.5 rounded-2xl shadow-2xl border border-emerald-400/30 flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-xl bg-black/25 flex items-center justify-center text-2xl text-white shrink-0" id="turn-icon">
-                    <i class="fa-solid fa-arrow-up"></i>
-                </div>
-                <div>
-                    <div class="text-[11px] uppercase tracking-wider text-emerald-100 font-bold" id="nav-step-dist">بعد 0 متر</div>
-                    <div class="text-sm font-extrabold text-white leading-snug" id="nav-instruction">استمر بالسير للأمام</div>
-                </div>
-            </div>
-            <button onclick="speakInstruction()" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition shrink-0" title="إعادة النطق الصوتي">
-                <i class="fa-solid fa-volume-high text-xs"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Floating Toggle Button to Open/Close Right Control Box -->
-    <button onclick="toggleRightDrawer()" id="btn-toggle-drawer" class="fixed top-4 right-4 z-30 glass-panel w-12 h-12 rounded-2xl shadow-2xl border border-white/20 flex items-center justify-center text-white hover:bg-blue-600 transition active:scale-95" title="فتح / إغلاق صندوق التحكم">
-        <i class="fa-solid fa-xmark text-lg" id="drawer-toggle-icon"></i>
-    </button>
-
-    <!-- Unified Compact Right-Side Control Box (All Controls & Texts Contained Here) -->
-    <aside id="right-control-box" class="fixed top-4 right-4 bottom-4 z-20 w-80 max-w-[calc(100vw-2rem)] glass-panel rounded-3xl shadow-2xl border border-white/15 flex flex-col overflow-hidden transition-all duration-300">
-        
-        <!-- Box Top Header (Space left on right for toggle button) -->
-        <div class="p-3.5 pr-16 border-b border-white/10 flex items-center justify-between gap-2 bg-slate-900/60">
-            <div class="flex items-center gap-1.5">
-                <button onclick="requestRealGPS(true)" class="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 transition active:scale-95" title="تحديد موقعي الحقيقي GPS">
-                    <i class="fa-solid fa-location-crosshairs"></i>
-                    <span data-i18n="myLoc">موقعي</span>
-                </button>
-                <button onclick="toggleMapTheme()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-amber-300 text-xs transition" title="تبديل مظهر الخريطة (نهاري / ليلي)">
-                    <i class="fa-solid fa-circle-half-stroke"></i>
-                </button>
-            </div>
-            <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-slate-800 text-white text-[11px] font-bold rounded-xl px-2.5 py-1.5 outline-none cursor-pointer border border-white/10">
-                <option value="ckb">کوردی</option>
-                <option value="ar" selected>العربية</option>
-                <option value="en">English</option>
-                <option value="tr">Türkçe</option>
-                <option value="fa">فارسی</option>
-            </select>
-        </div>
-
-        <!-- Scrollable Content Inside Right Box -->
-        <div class="p-3.5 overflow-y-auto flex-1 flex flex-col gap-3.5 no-scrollbar">
-
-            <!-- GPS Diagnostic Alert (Shown ONLY if browser blocks GPS) -->
-            <div id="gps-warning-banner" class="hidden bg-amber-950/90 border border-amber-500/40 p-2.5 rounded-2xl text-[11px] text-amber-100">
-                <div class="font-extrabold text-amber-300 flex items-center justify-between">
-                    <span id="gps-warn-title">إذن GPS غير مفعّل</span>
-                    <button onclick="document.getElementById('gps-warning-banner').classList.add('hidden')" class="text-amber-300 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                <p class="mt-1 leading-relaxed opacity-90" id="gps-warn-desc">افتح الرابط عبر HTTPS واسمح بصلاحية الموقع لتحديد مكانك الحقيقي.</p>
-                <button onclick="requestRealGPS(true)" class="mt-2 w-full py-1.5 rounded-lg bg-amber-500 text-gray-950 font-extrabold text-[11px]">إعادة المحاولة</button>
+            <!-- Search -->
+            <div style="display: flex; gap: 6px;">
+                <input type="text" id="searchInput" placeholder="ابحث عن مكان، شارع، محل بدقة...">
+                <button class="btn" onclick="searchPlace()">بحث</button>
             </div>
 
-            <!-- 1. Real OpenStreetMap Search -->
-            <div>
-                <div class="flex items-center gap-1.5 bg-slate-950/70 p-1.5 rounded-2xl border border-white/10">
-                    <input type="text" id="search-input" placeholder="ابحث عن مكان، شارع، محل..." class="bg-transparent w-full text-xs text-white placeholder-gray-400 outline-none px-2" onkeypress="if(event.key==='Enter') searchRealOSMPlaces()">
-                    <button onclick="searchRealOSMPlaces()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold transition shrink-0">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                    </button>
-                </div>
-                <!-- Search & Nearby Verified Results Dropdown -->
-                <div id="search-results-box" class="hidden mt-1.5 bg-slate-950/95 rounded-2xl overflow-hidden divide-y divide-white/10 max-h-44 overflow-y-auto border border-white/10"></div>
+            <!-- Categories / POIs (Strict separation) -->
+            <div style="font-size: 13px; font-weight: 700; color: #94a3b8; margin-top: 2px;">التصنيفات الدقيقة 100%:</div>
+            <div class="grid-buttons">
+                <button class="btn btn-secondary" onclick="fetchPOIs('fuel')">⛽ محطات وقود</button>
+                <button class="btn btn-secondary" onclick="fetchPOIs('pharmacy')">💊 صيدليات</button>
+                <button class="btn btn-secondary" onclick="fetchPOIs('clinic')">🩺 عيادات ومجمعات</button>
+                <button class="btn btn-secondary" onclick="fetchPOIs('gov_hospital')">🏥 مستشفيات حكومية</button>
+                <button class="btn btn-secondary" onclick="fetchPOIs('private_hospital')">🏨 مستشفيات أهلية</button>
+                <button class="btn btn-secondary" onclick="fetchPOIs('shop_special')">🛒 محلات تخصصية</button>
+                <button class="btn btn-secondary" onclick="fetchPOIs('market_mall')">🏬 أسواق ومولات</button>
+                <button class="btn btn-secondary" onclick="fetchPOIs('restaurant')">🍽️ مطاعم</button>
+                <button class="btn btn-secondary" onclick="fetchPOIs('mosque')">🕌 مساجد وجوامع</button>
             </div>
 
-            <!-- 2. Full 360° Map Rotation Controls -->
-            <div class="bg-slate-950/60 p-2.5 rounded-2xl border border-white/10">
-                <div class="flex items-center justify-between text-[11px] font-bold text-gray-300 mb-2">
-                    <span class="flex items-center gap-1.5">
-                        <i class="fa-solid fa-compass text-blue-400 transition-transform duration-150" id="compass-needle-icon"></i>
-                        <span data-i18n="rotateTitle">تدوير الخريطة 360°</span>
-                    </span>
-                    <span id="bearing-deg-val" class="text-blue-400 font-extrabold">0°</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="rotateMapBy(-45)" class="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold" title="تدوير يسار">-45°</button>
-                    <input type="range" id="rotation-slider" min="0" max="360" value="0" oninput="setMapRotation(this.value)" class="w-full accent-blue-500 cursor-pointer h-1.5 bg-gray-700 rounded-lg">
-                    <button onclick="rotateMapBy(45)" class="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold" title="تدوير يمين">+45°</button>
-                    <button onclick="setMapRotation(0)" class="px-2 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white text-[10px] font-bold" title="إعادة للشمال">0°</button>
-                </div>
+            <!-- Travel Modes -->
+            <div style="font-size: 13px; font-weight: 700; color: #94a3b8; margin-top: 2px;">وسيلة التنقل:</div>
+            <div class="grid-buttons">
+                <button class="btn" id="modeCar" onclick="setMode('car')">🚗 سيارة</button>
+                <button class="btn btn-secondary" id="modeWalk" onclick="setMode('walk')">🚶 مشي</button>
+                <button class="btn btn-secondary" id="modeBike" onclick="setMode('bike')">🚴 دراجة</button>
             </div>
 
-            <!-- 3. Verified Nearby Categories (Strictly Separated & Sorted Closest-First) -->
-            <div>
-                <div class="text-[11px] font-extrabold text-gray-400 mb-2" data-i18n="categoriesTitle">استكشاف أقرب المعالم (مرتبة بالمسطرة الهندسية):</div>
-                <div class="grid grid-cols-2 gap-1.5">
-                    <button onclick="findNearbyOSM('fuel')" class="p-2 rounded-xl bg-white/5 hover:bg-amber-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-gas-pump text-amber-400 w-3.5"></i> <span data-i18n="fuel">محطات وقود</span>
-                    </button>
-                    <button onclick="findNearbyOSM('pharmacy')" class="p-2 rounded-xl bg-white/5 hover:bg-teal-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-pills text-teal-400 w-3.5"></i> <span data-i18n="pharmacy">صيدليات</span>
-                    </button>
-                    <button onclick="findNearbyOSM('clinic')" class="p-2 rounded-xl bg-white/5 hover:bg-sky-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-stethoscope text-sky-400 w-3.5"></i> <span data-i18n="clinic">عيادات ومجمعات</span>
-                    </button>
-                    <button onclick="findNearbyOSM('gov_hospital')" class="p-2 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-hospital text-rose-500 w-3.5"></i> <span data-i18n="govHospital">مستشفيات حكومية</span>
-                    </button>
-                    <button onclick="findNearbyOSM('private_hospital')" class="p-2 rounded-xl bg-white/5 hover:bg-pink-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-heart-pulse text-pink-400 w-3.5"></i> <span data-i18n="privateHospital">مستشفيات أهلية</span>
-                    </button>
-                    <button onclick="findNearbyOSM('shop_special')" class="p-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-screwdriver-wrench text-purple-400 w-3.5"></i> <span data-i18n="shopSpecial">محلات (بنشر/كوزمتك/سيراميك)</span>
-                    </button>
-                    <button onclick="findNearbyOSM('market_mall')" class="p-2 rounded-xl bg-white/5 hover:bg-indigo-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-cart-shopping text-indigo-400 w-3.5"></i> <span data-i18n="marketMall">أسواق ومولات</span>
-                    </button>
-                    <button onclick="findNearbyOSM('food')" class="p-2 rounded-xl bg-white/5 hover:bg-emerald-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-utensils text-emerald-400 w-3.5"></i> <span data-i18n="food">مطاعم</span>
-                    </button>
-                    <button onclick="findNearbyOSM('mosque')" class="p-2 rounded-xl bg-white/5 hover:bg-cyan-500/20 border border-white/10 text-[11px] font-bold flex items-center gap-1.5 transition col-span-2">
-                        <i class="fa-solid fa-mosque text-cyan-400 w-3.5"></i> <span data-i18n="mosque">مساجد وجوامع</span>
-                    </button>
-                </div>
+            <!-- Shared Live Maps & Peer Chat -->
+            <div style="font-size: 13px; font-weight: 700; color: #94a3b8; margin-top: 2px;">الرحلات المشتركة والدردشة الحية:</div>
+            <div style="display: flex; gap: 6px;">
+                <input type="text" id="roomInput" placeholder="أدخل رمز الغرفة (مثال: karkuk99)...">
+                <button class="btn btn-success" onclick="joinRoom()">اتصال</button>
+            </div>
+            <button class="btn btn-secondary" onclick="copyShareLink()">🔗 نسخ رابط مشاركة موقعي الحقيقي</button>
+            
+            <div class="chat-container" id="chatBox">
+                <div class="chat-msg">مرحباً! قم بالانضمام للغرفة لبدء الدردشة الحية ومشاركة موقعك مع صديقك.</div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <input type="text" id="chatInput" placeholder="اكتب رسالة لصديقك..." onkeypress="if(event.key==='Enter') sendChatMsg()">
+                <button class="btn" onclick="sendChatMsg()">إرسال</button>
             </div>
 
-            <!-- 4. Travel Mode & Route Details -->
-            <div class="bg-slate-950/60 p-3 rounded-2xl border border-white/10 flex flex-col gap-2.5">
-                <div class="grid grid-cols-3 gap-1 bg-black/40 p-1 rounded-xl">
-                    <button onclick="setTravelMode('car')" id="mode-car" class="py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 text-white flex items-center justify-center gap-1 transition">
-                        <i class="fa-solid fa-car"></i> <span data-i18n="car">سيارة</span>
-                    </button>
-                    <button onclick="setTravelMode('walk')" id="mode-walk" class="py-1.5 rounded-lg text-[11px] font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
-                        <i class="fa-solid fa-person-walking"></i> <span data-i18n="walk">مشي</span>
-                    </button>
-                    <button onclick="setTravelMode('bike')" id="mode-bike" class="py-1.5 rounded-lg text-[11px] font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
-                        <i class="fa-solid fa-bicycle"></i> <span data-i18n="bike">دراجة</span>
-                    </button>
-                </div>
-
-                <!-- Lifestyle-Centric Routing Options (Scenic Route & Wheelchair Accessibility) -->
-                <div class="grid grid-cols-2 gap-1 bg-black/30 p-1 rounded-xl">
-                    <button onclick="setTravelMode('scenic')" id="mode-scenic" class="py-1.5 rounded-lg text-[10px] font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
-                        <i class="fa-solid fa-tree text-emerald-400"></i> <span data-i18n="scenic">مسار سياحي/جمالي</span>
-                    </button>
-                    <button onclick="setTravelMode('wheelchair')" id="mode-wheelchair" class="py-1.5 rounded-lg text-[10px] font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
-                        <i class="fa-solid fa-wheelchair text-sky-400"></i> <span data-i18n="wheelchair">ذوي الاحتياجات</span>
-                    </button>
-                </div>
-
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <span class="text-[11px] font-extrabold text-gray-300" data-i18n="waypointsTitle">الوجهات المحددة (اضغط على الخريطة لإضافة):</span>
-                        <button onclick="clearAllWaypoints()" id="btn-clear-all" class="hidden text-[10px] font-bold text-rose-400 hover:text-rose-300 bg-rose-500/10 px-2 py-0.5 rounded-md transition">
-                            <i class="fa-solid fa-trash-can mr-1"></i> <span data-i18n="clearAll">مسح الكل</span>
-                        </button>
-                    </div>
-
-                    <!-- Multi-Stop Waypoints List -->
-                    <div id="waypoints-list" class="flex flex-col gap-1.5 max-h-36 overflow-y-auto no-scrollbar mb-2">
-                        <div class="text-[11px] text-gray-400 bg-black/25 p-2 rounded-xl text-center" id="empty-waypoints-msg" data-i18n="tapMap">اضغط على أي نقطة في الخريطة أو ابحث لإضافة وجهة</div>
-                    </div>
-
-                    <!-- Clean Street Distance & Realistic Duration Summary (Dynamic per Car / Walk / Bike) -->
-                    <div class="grid grid-cols-2 gap-2 bg-black/35 p-2.5 rounded-xl text-center border border-white/5">
-                        <div>
-                            <div class="text-[10px] text-gray-400 font-bold" data-i18n="roadDistLabel">مسافة الطريق</div>
-                            <div class="text-xs font-extrabold text-blue-400 mt-0.5 leading-tight" id="metric-dist">0 م (0 فيت)</div>
-                        </div>
-                        <div class="border-r border-white/10">
-                            <div class="text-[10px] text-gray-400 font-bold" data-i18n="timeLabel">الوقت المقدر</div>
-                            <div class="text-xs font-extrabold text-emerald-400 mt-0.5 leading-tight" id="metric-time">0 د</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="route-summary-bar" class="hidden px-2.5 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/25 text-[11px] text-blue-200 truncate">
-                    <span id="route-summary-text"></span>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <button onclick="startNavigation()" id="btn-start-nav" disabled class="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 text-white font-extrabold text-xs shadow-lg flex items-center justify-center gap-1.5 transition">
-                        <i class="fa-solid fa-location-arrow"></i>
-                        <span id="start-btn-text">ابدأ التوجيه</span>
-                    </button>
-                    <button onclick="stopNavigation()" id="btn-stop-nav" class="hidden px-3.5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-lg transition">
-                        <i class="fa-solid fa-stop"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 5. Offline Tiles, Clear POI Pins & Local Road Alert -->
-            <div class="grid grid-cols-3 gap-1.5 mt-auto pt-1">
-                <button onclick="downloadRealOfflineTiles()" id="btn-save-tiles" class="p-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold flex items-center justify-center gap-1 transition">
-                    <i class="fa-solid fa-cloud-arrow-down" id="save-icon"></i>
-                    <span id="save-label" data-i18n="save">حفظ</span>
-                </button>
-                <button onclick="clearPOIMarkers()" class="p-2 rounded-xl bg-slate-700/40 hover:bg-slate-700/70 border border-white/10 text-gray-200 text-[11px] font-bold flex items-center justify-center gap-1 transition" title="إخفاء دبابيس المعالم">
-                    <i class="fa-solid fa-eye-slash"></i>
-                    <span data-i18n="clearPins">إلغاء الإشارات</span>
-                </button>
-                <button onclick="openHazardModal()" class="p-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[11px] font-bold flex items-center justify-center gap-1 transition">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <span data-i18n="alert">تنبيه</span>
-                </button>
-            </div>
-
-            <!-- 6. Social Maps, Curator Lists & Indoor Navigation Hub -->
-            <div class="grid grid-cols-2 gap-1.5 pt-1">
-                <button onclick="openSocialHubModal()" class="p-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition">
-                    <i class="fa-solid fa-users"></i>
-                    <span data-i18n="socialHub">خرائط اجتماعية وخبراء</span>
-                </button>
-                <button onclick="openIndoorModal()" class="p-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition">
-                    <i class="fa-solid fa-building-user"></i>
-                    <span data-i18n="indoorNav">ملاحة داخلية ورفوف</span>
-                </button>
-            </div>
-        </div>
-    </aside>
-
-    <!-- Local Crowdsourced Micro-Reporting Modal (Traffic, Night Safety & Street Weather) -->
-    <div id="hazard-modal" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="glass-panel w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-base font-extrabold text-white" data-i18n="reportTitle">بلاغات المجتمع والأمان الفورية</h3>
-                <button onclick="closeHazardModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <p class="text-[11px] text-gray-400 mb-3">اختر نوع البلاغ لتنبيه المستخدمين وحماية المشاة والمركبات:</p>
-            <div class="grid grid-cols-2 gap-2.5">
-                <button onclick="addLocalHazard('traffic', 'ازدحام / حادث')" class="p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25 flex flex-col items-center gap-1.5 transition">
-                    <i class="fa-solid fa-car-burst text-xl text-rose-400"></i>
-                    <span class="text-[11px] font-bold" data-i18n="traffic">ازدحام / حادث</span>
-                </button>
-                <button onclick="addLocalHazard('roadwork', 'أعمال صيانة')" class="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 flex flex-col items-center gap-1.5 transition">
-                    <i class="fa-solid fa-person-digging text-xl text-amber-400"></i>
-                    <span class="text-[11px] font-bold" data-i18n="roadwork">أعمال صيانة</span>
-                </button>
-                <button onclick="addLocalHazard('dark_street', 'شارع غير مضاء / مضايقات')" class="p-3 rounded-2xl bg-purple-500/15 border border-purple-500/30 hover:bg-purple-500/25 flex flex-col items-center gap-1.5 transition">
-                    <i class="fa-solid fa-moon text-xl text-purple-400"></i>
-                    <span class="text-[11px] font-bold text-center">إضاءة ضعيفة / أمان ليلي</span>
-                </button>
-                <button onclick="addLocalHazard('stray_dogs', 'كلاب ضالة في الشارع')" class="p-3 rounded-2xl bg-orange-500/15 border border-orange-500/30 hover:bg-orange-500/25 flex flex-col items-center gap-1.5 transition">
-                    <i class="fa-solid fa-dog text-xl text-orange-400"></i>
-                    <span class="text-[11px] font-bold text-center">تنبيه كلاب ضالة</span>
-                </button>
-                <button onclick="addLocalHazard('flood', 'تجمع مياه أمطار / فيضان')" class="p-3 rounded-2xl bg-sky-500/15 border border-sky-500/30 hover:bg-sky-500/25 flex flex-col items-center gap-1.5 transition">
-                    <i class="fa-solid fa-water text-xl text-sky-400"></i>
-                    <span class="text-[11px] font-bold text-center">تجمع مياه أمطار</span>
-                </button>
-                <button onclick="addLocalHazard('slippery', 'طريق زلق / غبار كثيف')" class="p-3 rounded-2xl bg-teal-500/15 border border-teal-500/30 hover:bg-teal-500/25 flex flex-col items-center gap-1.5 transition">
-                    <i class="fa-solid fa-smog text-xl text-teal-400"></i>
-                    <span class="text-[11px] font-bold text-center">طريق زلق / غبار</span>
-                </button>
+            <!-- Routing Info & Controls -->
+            <div id="routeInfo" class="status-box">المسافة والوقت: لم يتم تحديد وجهة بعد.</div>
+            <div class="grid-buttons">
+                <button class="btn btn-secondary" onclick="saveOfflineTiles()">💾 حفظ الخريطة</button>
+                <button class="btn btn-danger" onclick="clearWaypoints()">مسح الوجهات</button>
             </div>
         </div>
     </div>
 
-    <!-- Social Live Maps & Curator Lists Modal -->
-    <div id="social-modal" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="glass-panel w-full max-w-md rounded-3xl p-5 border border-white/15 shadow-2xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto">
-            <div class="flex justify-between items-center">
-                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-users text-indigo-400"></i> خرائط التواصل والخبراء
-                </h3>
-                <button onclick="closeSocialHubModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-
-            <!-- Shared Live Group Map -->
-            <div class="bg-indigo-950/50 border border-indigo-500/30 p-3 rounded-2xl">
-                <div class="text-xs font-extrabold text-indigo-300 mb-1"><i class="fa-solid fa-tower-broadcast mr-1"></i> خريطة الرحلة الجماعية المشتركة</div>
-                <p class="text-[11px] text-gray-300 mb-2">أنشئ رابطاً لمشاركة موقعك الحالي ووجهاتك مع أصدقائك أثناء الرحلة.</p>
-                <div class="flex gap-2">
-                    <button onclick="shareLiveGroupMap()" class="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition">
-                        <i class="fa-solid fa-share-nodes mr-1"></i> نسخ رابط التتبع المباشر
-                    </button>
-                </div>
-            </div>
-
-            <!-- Influencer & Curator Maps -->
-            <div>
-                <div class="text-xs font-extrabold text-gray-300 mb-2"><i class="fa-solid fa-award text-amber-400 mr-1"></i> خرائط منسقة من الخبراء وصنّاع المحتوى</div>
-                <div class="flex flex-col gap-2">
-                    <button onclick="loadCuratorCollection('cafe')" class="p-2.5 rounded-xl bg-white/5 hover:bg-amber-500/15 border border-white/10 text-right transition flex items-center justify-between">
-                        <div>
-                            <div class="text-xs font-extrabold text-white">أفضل مقاهي القهوة المختصة</div>
-                            <div class="text-[10px] text-gray-400">تنسيق: رابطة الباريستا والمختصين • بحث حي</div>
-                        </div>
-                        <i class="fa-solid fa-mug-hot text-amber-400"></i>
-                    </button>
-                    <button onclick="loadCuratorCollection('heritage')" class="p-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/15 border border-white/10 text-right transition flex items-center justify-between">
-                        <div>
-                            <div class="text-xs font-extrabold text-white">مسار المعالم التاريخية والتراثية</div>
-                            <div class="text-[10px] text-gray-400">تنسيق: مرشدو السياحة والتاريخ المحلي</div>
-                        </div>
-                        <i class="fa-solid fa-landmark text-emerald-400"></i>
-                    </button>
-                    <button onclick="loadCuratorCollection('family_parks')" class="p-2.5 rounded-xl bg-white/5 hover:bg-sky-500/15 border border-white/10 text-right transition flex items-center justify-between">
-                        <div>
-                            <div class="text-xs font-extrabold text-white">حدائق ومتنزهات عائلية آمنة</div>
-                            <div class="text-[10px] text-gray-400">تنسيق: دليل العائلة والأنشطة الخارجية</div>
-                        </div>
-                        <i class="fa-solid fa-tree text-sky-400"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Advanced Indoor Navigation & Store Shelf Finder Modal -->
-    <div id="indoor-modal" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="glass-panel w-full max-w-md rounded-3xl p-5 border border-white/15 shadow-2xl flex flex-col gap-3.5">
-            <div class="flex justify-between items-center">
-                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-building-user text-cyan-400"></i> الملاحة الداخلية والبحث في الرفوف
-                </h3>
-                <button onclick="closeIndoorModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <p class="text-[11px] text-gray-300">ابحث عن منتج داخل السوبرماركت، عيادة داخل مستشفى، أو بوابة داخل مبنى كبير:</p>
-            <div class="flex gap-1.5 bg-slate-950/70 p-1.5 rounded-xl border border-white/10">
-                <input type="text" id="indoor-search-input" placeholder="مثال: حليب أطفال، طوارئ، صيدلية داخلية، بوابة 3..." class="bg-transparent w-full text-xs text-white placeholder-gray-400 outline-none px-2" oninput="searchIndoorDirectory(this.value)">
-                <button onclick="searchIndoorDirectory(document.getElementById('indoor-search-input').value)" class="px-3 py-1.5 rounded-lg bg-cyan-600 text-xs font-bold">بحث</button>
-            </div>
-            <div id="indoor-results-list" class="flex flex-col gap-2 max-h-56 overflow-y-auto no-scrollbar"></div>
-        </div>
-    </div>
-
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // ==========================================
-        // 2. Multi-Language Dictionary (Full Kurdish Sorani with Connected Font)
-        // ==========================================
-        const i18n = {
-            ckb: {
-                dir: 'rtl',
-                myLoc: 'شوێنەکەم',
-                searchPlaceholder: 'بگەڕێ بۆ شوێن، شەقام، دووکان...',
-                rotateTitle: 'سوڕاندنی نەخشە ٣٦٠°',
-                categoriesTitle: 'نزیکترین شوێنەکان (پەیوەندی ڕاستەوخۆ بە تۆڕ):',
-                fuel: 'بەنزینخانە',
-                pharmacy: 'دەرمانخانە',
-                clinic: 'نۆرینگە و کۆمەڵگای پزیشکی',
-                govHospital: 'نەخۆشخانەی حکومی',
-                privateHospital: 'نەخۆشخانەی ئەهلی',
-                shopSpecial: 'دووکان (پەنچەری/کۆزمەتیک/سیرامیک)',
-                marketMall: 'مارکێت و مۆڵ',
-                food: 'چێشتخانە',
-                mosque: 'مزگەوت و جامع',
-                alert: 'ئاگاداری',
-                save: 'داگرتن',
-                clearPins: 'لابردنی نیشانەکان',
-                walk: 'پیادە',
-                car: 'ئۆتۆمبێل',
-                bike: 'پاسکیل',
-                scenic: 'ڕێگای گەشتیاری',
-                wheelchair: 'خاوەن پێداویستی',
-                socialHub: 'نەخشەی کۆمەڵایەتی',
-                indoorNav: 'نەخشەی ناوخۆیی',
-                waypointsTitle: 'شوێنە دیاریکراوەکان (پەنجە بنێ بۆ زیادکردن):',
-                clearAll: 'سڕینەوەی هەمووی',
-                tapMap: 'پەنجە بنێ بە نەخشەکەدا یان بگەڕێ بۆ دیاریکردنی شوێن',
-                roadDistLabel: 'دووری ڕێگا',
-                timeLabel: 'کاتی خەمڵێنراو',
-                startNav: 'دەستپێکردنی ڕێنمایی',
-                arrived: 'گەیشتیتە شوێنی مەبەست!',
-                reportTitle: 'ئاگاداری کۆمەڵگا و سەلامەتی',
-                traffic: 'قەرەباڵغی / ڕووداو',
-                roadwork: 'چاککردنەوەی ڕێگا',
-                camera: 'کامێرای چاودێری',
-                closed: 'ڕێگا داخراوە'
-            },
-            ar: {
-                dir: 'rtl',
-                myLoc: 'موقعي',
-                searchPlaceholder: 'ابحث عن مكان، شارع، محل...',
-                rotateTitle: 'تدوير الخريطة 360°',
-                categoriesTitle: 'استكشاف أقرب المعالم (تحديث مباشر من الشبكة):',
-                fuel: 'محطات وقود',
-                pharmacy: 'صيدليات',
-                clinic: 'عيادات ومجمعات',
-                govHospital: 'مستشفيات حكومية',
-                privateHospital: 'مستشفيات أهلية',
-                shopSpecial: 'محلات (بنشر/كوزمتك/سيراميك)',
-                marketMall: 'أسواق ومولات',
-                food: 'مطاعم',
-                mosque: 'مساجد وجوامع',
-                alert: 'تنبيه',
-                save: 'حفظ',
-                clearPins: 'إلغاء الإشارات',
-                walk: 'مشي',
-                car: 'سيارة',
-                bike: 'دراجة',
-                scenic: 'مسار سياحي/جمالي',
-                wheelchair: 'ذوي الاحتياجات',
-                socialHub: 'خرائط اجتماعية وخبراء',
-                indoorNav: 'ملاحة داخلية ورفوف',
-                waypointsTitle: 'الوجهات المحددة (اضغط على الخريطة للإضافة):',
-                clearAll: 'مسح الكل',
-                tapMap: 'اضغط على أي نقطة في الخريطة أو ابحث لإضافة وجهة',
-                roadDistLabel: 'مسافة الطريق',
-                timeLabel: 'الوقت المقدر',
-                startNav: 'ابدأ التوجيه',
-                arrived: 'لقد وصلت إلى وجهتك بدقة!',
-                reportTitle: 'بلاغات المجتمع والأمان الفورية',
-                traffic: 'ازدحام / حادث',
-                roadwork: 'أعمال صيانة',
-                camera: 'كاميرا مراقبة',
-                closed: 'طريق مغلق'
-            },
-            en: {
-                dir: 'ltr',
-                myLoc: 'My GPS',
-                searchPlaceholder: 'Search place, street, shop...',
-                rotateTitle: '360° Map Rotation',
-                categoriesTitle: 'Nearest Verified Landmarks (Live Network):',
-                fuel: 'Fuel Stations',
-                pharmacy: 'Pharmacies',
-                clinic: 'Clinics & Med Centers',
-                govHospital: 'Gov Hospitals',
-                privateHospital: 'Private Hospitals',
-                shopSpecial: 'Shops (Tire/Cosmetic/Ceramic)',
-                marketMall: 'Markets & Malls',
-                food: 'Restaurants',
-                mosque: 'Mosques',
-                alert: 'Alert',
-                save: 'Save',
-                clearPins: 'Clear Pins',
-                walk: 'Walk',
-                car: 'Car',
-                bike: 'Bike',
-                scenic: 'Scenic Route',
-                wheelchair: 'Wheelchair Access',
-                socialHub: 'Social & Curators',
-                indoorNav: 'Indoor & Shelves',
-                waypointsTitle: 'Selected Destinations (Tap map to add):',
-                clearAll: 'Clear All',
-                tapMap: 'Tap anywhere on the map or search to add destination',
-                roadDistLabel: 'Road Distance',
-                timeLabel: 'Est. Time',
-                startNav: 'Start Navigation',
-                arrived: 'You have arrived at your destination!',
-                reportTitle: 'Community & Safety Reporting',
-                traffic: 'Traffic / Crash',
-                roadwork: 'Roadwork',
-                camera: 'Speed Camera',
-                closed: 'Road Closed'
-            },
-            tr: {
-                dir: 'ltr',
-                myLoc: 'Konumum',
-                searchPlaceholder: 'Yer, cadde, mağaza arayın...',
-                rotateTitle: '360° Harita Döndürme',
-                categoriesTitle: 'En Yakın Gerçek Yerler (Canlı Ağ):',
-                fuel: 'Akaryakıt',
-                pharmacy: 'Eczaneler',
-                clinic: 'Klinikler',
-                govHospital: 'Devlet Hastaneleri',
-                privateHospital: 'Özel Hastaneler',
-                shopSpecial: 'Dükkanlar (Lastik/Kozmetik/Seramik)',
-                marketMall: 'Market & AVM',
-                food: 'Restoranlar',
-                mosque: 'Camiler',
-                alert: 'Uyarı',
-                save: 'İndir',
-                clearPins: 'İşaretleri Sil',
-                walk: 'Yürüyüş',
-                car: 'Araba',
-                bike: 'Bisiklet',
-                scenic: 'Manzaralı Rota',
-                wheelchair: 'Engelli Erişimi',
-                socialHub: 'Sosyal Haritalar',
-                indoorNav: 'İç Mekan & Raf',
-                waypointsTitle: 'Seçilen Hedefler (Eklemek için dokunun):',
-                clearAll: 'Tümünü Sil',
-                tapMap: 'Hedef eklemek için haritaya dokunun veya arayın',
-                roadDistLabel: 'Yol Mesafesi',
-                timeLabel: 'Tahmini Süre',
-                startNav: 'Navigasyonu Başlat',
-                arrived: 'Hedefinize ulaştınız!',
-                reportTitle: 'Topluluk ve Güvenlik Bildirimi',
-                traffic: 'Trafik / Kaza',
-                roadwork: 'Yol Çalışması',
-                camera: 'Hız Kamerası',
-                closed: 'Yol Kapalı'
-            },
-            fa: {
-                dir: 'rtl',
-                myLoc: 'موقعیت من',
-                searchPlaceholder: 'جستجوی مکان، خیابان، فروشگاه...',
-                rotateTitle: 'چرخش 360 درجه نقشه',
-                categoriesTitle: 'نزدیک‌ترین مکان‌ها (اتصال مستقیم به شبکه):',
-                fuel: 'پمپ بنزین',
-                pharmacy: 'داروخانه',
-                clinic: 'کلینیک و درمانگاه',
-                govHospital: 'بیمارستان دولتی',
-                privateHospital: 'بیمارستان خصوصی',
-                shopSpecial: 'مغازه (آپاراتی/آرایشی/سرامیک)',
-                marketMall: 'مارکت و مال',
-                food: 'رستوران',
-                mosque: 'مسجد',
-                alert: 'هشدار',
-                save: 'ذخیره',
-                clearPins: 'حذف نشانه‌ها',
-                walk: 'پیاده',
-                car: 'خودرو',
-                bike: 'دوچرخه',
-                scenic: 'مسیر گردشگری',
-                wheelchair: 'مسیر ویلچر',
-                socialHub: 'نقشه اجتماعی',
-                indoorNav: 'مسیریابی داخلی',
-                waypointsTitle: 'مقصدهای انتخاب‌شده (برای افزودن ضربه بزنید):',
-                clearAll: 'پاک کردن همه',
-                tapMap: 'برای افزودن مقصد روی نقشه ضربه بزنید یا جستجو کنید',
-                roadDistLabel: 'مسافت جاده',
-                timeLabel: 'زمان تخمینی',
-                startNav: 'شروع مسیریابی',
-                arrived: 'شما به مقصد رسیدید!',
-                reportTitle: 'گزارش ایمنی و جامعه',
-                traffic: 'ترافیک / تصادف',
-                roadwork: 'عملیات راهسازی',
-                camera: 'دوربین کنترل سرعت',
-                closed: 'جاده بسته است'
-            }
-        };
-
-        // ==========================================
-        // 3. Core Map State (Network-First Cache v2 & Live Routing)
-        // ==========================================
-        const OFFLINE_TILE_CACHE = 'reberai-osm-tiles-v2';
-
-        if ('caches' in window) {
-            caches.keys().then(keys => keys
-                .filter(k => k.startsWith('reberai-osm-tiles') && k !== OFFLINE_TILE_CACHE)
-                .forEach(k => caches.delete(k)));
-        }
-
-        let currentLang = 'ar';
-        let isDarkMap = false;
-        let isDrawerOpen = true;
-        let travelMode = 'car';
-        let isNavigating = false;
-        let gpsWatchId = null;
-        let hasRealGPS = false;
-        let userCoords = null;
-        let initialView = [35.4681, 44.3922];
-        let waypoints = []; // Array of { id, name, coords: [lat, lon], marker }
-        let routeSteps = [];
-        let currentStepIndex = 0;
-        let pillTimeout = null;
-
-        let map, userMarker, routePolyline;
-        let poiLayerGroup, hazardsLayerGroup;
-
-        function createOfflineTileLayer(urlTemplate, options) {
-            const Layer = L.TileLayer.extend({
-                createTile: function (coords, done) {
-                    const tile = document.createElement('img');
-                    tile.alt = '';
-                    const url = this.getTileUrl(coords);
-                    const fromCache = () =>
-                        caches.open(OFFLINE_TILE_CACHE)
-                            .then(c => c.match(url))
-                            .then(r => r ? r.blob() : null)
-                            .then(b => {
-                                if (b) { tile.src = URL.createObjectURL(b); done(null, tile); }
-                                else done(new Error('no tile'), tile);
-                            })
-                            .catch(e => done(e, tile));
-
-                    fetch(url, { cache: 'no-cache' })
-                        .then(res => {
-                            if (!res.ok) throw new Error('bad');
-                            const copy = res.clone();
-                            return res.blob().then(b => {
-                                tile.src = URL.createObjectURL(b);
-                                done(null, tile);
-                                caches.open(OFFLINE_TILE_CACHE).then(c => c.put(url, copy)).catch(() => {});
-                            });
-                        })
-                        .catch(fromCache);
-                    return tile;
-                }
-            });
-            return new Layer(urlTemplate, options);
-        }
-
-        window.onload = function() {
-            if (typeof L === 'undefined') {
-                showTopPill('تعذر تحميل مكتبة الخرائط، يرجى تحديث الصفحة', 'fa-solid fa-triangle-exclamation text-rose-400', 5000);
-                return;
-            }
-            initMap();
-            loadSavedLocalHazards();
-            requestRealGPS(false);
-            checkSharedLocationHash();
-        };
+        let map, userMarker, currentMode = 'car';
+        let waypoints = [];
+        let waypointMarkers = [];
+        let routeLine = null;
+        let currentRoom = null;
+        let peerLocationTimer = null;
+        let friendMarker = null;
 
         function initMap() {
-            // Initialize Leaflet with Full 360° Rotation & Two-Finger Touch Rotate enabled
-            // Disable zoomAnimation/markerZoomAnimation so the blue route line & pin stay 100% locked to the street with zero drift
-            map = L.map('map', {
+            // تهيئة الخريطة مع الذاكرة المؤقتة لمنع التقطيع (keepBuffer)
+            map = L.map('map', { 
                 zoomControl: false,
-                rotate: true,
-                touchRotate: true,
-                rotateControl: false,
-                bearing: 0,
-                zoomAnimation: false,
-                markerZoomAnimation: false,
-                fadeAnimation: false
-            }).setView(initialView, 15);
-
-            // Network-First OpenStreetMap tiles (falls back to cache only when offline)
-            createOfflineTileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                keepBuffer: 8,
+                updateWhenIdle: false
+            }).setView([35.465, 44.386], 15);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
-                attribution: '&copy; OpenStreetMap'
+                attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
-            poiLayerGroup = L.layerGroup().addTo(map);
-            hazardsLayerGroup = L.layerGroup().addTo(map);
+            L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-            // Sync rotation slider & compass needle when user rotates map with two fingers
-            map.on('rotate', function() {
-                const bearing = Math.round((map.getBearing() % 360 + 360) % 360);
-                document.getElementById('rotation-slider').value = bearing;
-                document.getElementById('bearing-deg-val').textContent = `${bearing}°`;
-                document.getElementById('compass-needle-icon').style.transform = `rotate(${bearing}deg)`;
+            map.on('click', function(e) {
+                addWaypoint(e.latlng.lat, e.latlng.lng);
             });
 
-            // Keep all pinned markers & blue route polyline 100% anchored to exact street coordinates on every zoom/rotate
-            map.on('zoom zoomend moveend rotate', function() {
-                if (userMarker && userCoords) userMarker.setLatLng(userCoords);
-                waypoints.forEach(wp => {
-                    if (wp.marker && wp.coords) wp.marker.setLatLng(wp.coords);
-                });
-                if (routePolyline && typeof routePolyline.redraw === 'function') {
-                    routePolyline.redraw();
-                }
-            });
-
-            // Click anywhere on map to add a real destination waypoint
-            map.on('click', async function(e) {
-                document.getElementById('search-results-box').classList.add('hidden');
-                const coords = [e.latlng.lat, e.latlng.lng];
-                showTopPill(currentLang === 'ckb' ? 'دیاریکردنی ناوی شوێن...' : 'جاري قراءة اسم المكان الحقيقي...', 'fa-solid fa-location-dot text-blue-400', 2000);
-                const name = await reverseGeocodeOSM(coords[0], coords[1]);
-                addWaypoint(name, coords);
-            });
-        }
-
-        // ==========================================
-        // 4. Right Control Box Toggle & 360° Rotation Controls
-        // ==========================================
-        function toggleRightDrawer() {
-            isDrawerOpen = !isDrawerOpen;
-            const box = document.getElementById('right-control-box');
-            const icon = document.getElementById('drawer-toggle-icon');
-            if (isDrawerOpen) {
-                box.classList.remove('translate-x-[120%]', 'opacity-0', 'pointer-events-none');
-                icon.className = 'fa-solid fa-xmark text-lg';
-            } else {
-                box.classList.add('translate-x-[120%]', 'opacity-0', 'pointer-events-none');
-                icon.className = 'fa-solid fa-sliders text-lg';
+            // التحقق من وجود غرفة في الرابط عند التحميل
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomParam = urlParams.get('room');
+            if (roomParam) {
+                document.getElementById('roomInput').value = roomParam;
+                joinRoom();
             }
         }
 
-        function setMapRotation(deg) {
-            const angle = ((parseFloat(deg) % 360) + 360) % 360;
-            if (map && typeof map.setBearing === 'function') {
-                map.setBearing(angle);
-            }
-            document.getElementById('rotation-slider').value = Math.round(angle);
-            document.getElementById('bearing-deg-val').textContent = `${Math.round(angle)}°`;
-            document.getElementById('compass-needle-icon').style.transform = `rotate(${angle}deg)`;
-        }
-
-        function rotateMapBy(delta) {
-            const current = map && typeof map.getBearing === 'function' ? map.getBearing() : 0;
-            setMapRotation(current + delta);
-        }
-
-        // ==========================================
-        // 5. True Hardware GPS Only (Zero Fake Circles/Numbers)
-        // ==========================================
-        function requestRealGPS(isManualTrigger = false) {
+        function locateUser() {
             if (!navigator.geolocation) {
-                showGPSWarning('المتصفح لا يدعم GPS', 'متصفحك الحالي لا يدعم تحديد الموقع الجغرافي.');
+                alert('متصفحك لا يدعم تحديد الموقع الجغرافي GPS');
                 return;
             }
-
-            if (isManualTrigger) {
-                showTopPill('جاري تحديد موقعك الحقيقي...', 'fa-solid fa-satellite-dish animate-spin text-blue-400', 2500);
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    onRealGPSSuccess(position, true);
-                    startContinuousGPSWatch();
-                },
-                (error) => {
-                    handleGPSError(error);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
+            document.getElementById('gpsStatus').innerText = 'جاري التقاط إحداثيات GPS الحقيقية بدقة...';
+            navigator.geolocation.getCurrentPosition(position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy.toFixed(1);
+                
+                document.getElementById('gpsStatus').innerText = `تم تحديد موقعك الحقيقي بدقة GPS (±${accuracy} متر)`;
+                
+                if (userMarker) {
+                    userMarker.setLatLng([lat, lng]);
+                } else {
+                    userMarker = L.circleMarker([lat, lng], {
+                        radius: 9,
+                        color: '#ffffff',
+                        weight: 2,
+                        fillColor: '#2563eb',
+                        fillOpacity: 1
+                    }).addTo(map).bindPopup('موقعك الحالي الحقيقي (GPS)');
+                }
+                map.setView([lat, lng], 16);
+            }, error => {
+                document.getElementById('gpsStatus').innerText = 'فشل تحديد الموقع. تأكد من تفعيل إذن الـ GPS.';
+            }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
         }
 
-        function startContinuousGPSWatch() {
-            if (gpsWatchId !== null || !navigator.geolocation) return;
-            gpsWatchId = navigator.geolocation.watchPosition(
-                (position) => onRealGPSSuccess(position, false),
-                (error) => { if (!hasRealGPS) handleGPSError(error); },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 }
-            );
-        }
-
-        function onRealGPSSuccess(position, centerCamera) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            const isFirstLock = !hasRealGPS;
-            hasRealGPS = true;
-            userCoords = [lat, lon];
-
-            document.getElementById('gps-warning-banner').classList.add('hidden');
-
-            // Clean blue dot only (no fake large circles or fake numbers)
+        function copyShareLink() {
             if (!userMarker) {
-                const gpsIcon = L.divIcon({
-                    className: 'true-gps-marker',
-                    html: '<div class="gps-blue-dot"></div>',
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 10]
-                });
-                userMarker = L.marker(userCoords, { icon: gpsIcon, zIndexOffset: 1000, interactive: false }).addTo(map);
-            } else {
-                userMarker.setLatLng(userCoords);
-            }
-
-            if (isFirstLock || centerCamera || isNavigating) {
-                map.flyTo(userCoords, isNavigating ? 17 : 16, { duration: 0.9 });
-            }
-
-            if (isFirstLock) {
-                showTopPill('تم تحديد موقعك الحقيقي بنجاح', 'fa-solid fa-location-crosshairs text-emerald-400', 3000);
-            }
-
-            if (waypoints.length > 0) {
-                if (isNavigating) updateNavigationProgress();
-                else if (isFirstLock) recalculateMultiWaypointRoute();
-            }
-        }
-
-        function handleGPSError(error) {
-            const isInIframe = window.self !== window.top;
-            const isInsecure = location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
-
-            if (error.code === error.PERMISSION_DENIED) {
-                if (isInIframe) {
-                    showGPSWarning(
-                        'GPS محجوب داخل نافذة المعاينة',
-                        'افتح التطبيق مباشرة عبر رابط HTTPS (مثل GitHub Pages) ليعمل موقعك الحقيقي.'
-                    );
-                } else if (isInsecure) {
-                    showGPSWarning(
-                        'مطلوب رابط آمن HTTPS',
-                        'المتصفح يمنع GPS على الروابط غير الآمنة.'
-                    );
-                } else {
-                    showGPSWarning(
-                        'تم رفض إذن الموقع',
-                        'يرجى السماح بصلاحية الموقع من إعدادات المتصفح.'
-                    );
-                }
-            } else {
-                showGPSWarning('تعذر التقاط إشارة GPS', 'تأكد من تفعيل خدمة الموقع (Location) في جهازك.');
-            }
-        }
-
-        function showGPSWarning(title, desc) {
-            document.getElementById('gps-warn-title').textContent = title;
-            document.getElementById('gps-warn-desc').textContent = desc;
-            document.getElementById('gps-warning-banner').classList.remove('hidden');
-        }
-
-        // ==========================================
-        // 6. 100% Live Network OpenStreetMap Search & Full POI Coverage (No Cache)
-        // ==========================================
-        async function reverseGeocodeOSM(lat, lon) {
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
-                    cache: 'no-store',
-                    headers: { 'Accept-Language': currentLang === 'ckb' ? 'ar' : currentLang }
-                });
-                if (!res.ok) throw new Error('Network error');
-                const data = await res.json();
-                if (data && data.address) {
-                    const name = data.name || data.address.road || data.address.neighbourhood || data.address.suburb || data.display_name.split(',')[0];
-                    const city = data.address.city || data.address.town || data.address.state || '';
-                    return city && name !== city ? `${name}، ${city}` : (name || city);
-                }
-            } catch (e) {
-                showTopPill('تعذر الاتصال بخادم الأسماء (تأكد من الإنترنت)', 'fa-solid fa-wifi text-amber-400', 3000);
-            }
-            return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-        }
-
-        async function searchRealOSMPlaces() {
-            const query = document.getElementById('search-input').value.trim();
-            if (!query) return;
-
-            const resultsBox = document.getElementById('search-results-box');
-            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-blue-300 flex items-center gap-2"><i class="fa-solid fa-spinner animate-spin"></i> جاري البحث المباشر عبر Nominatim...</div>`;
-            resultsBox.classList.remove('hidden');
-
-            const center = userCoords || [map.getCenter().lat, map.getCenter().lng];
-            const viewbox = `${center[1] - 0.35},${center[0] + 0.35},${center[1] + 0.35},${center[0] - 0.35}`;
-
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=${viewbox}&limit=8&addressdetails=1`, {
-                    cache: 'no-store',
-                    headers: { 'Accept-Language': currentLang === 'ckb' ? 'ar' : currentLang }
-                });
-                if (!res.ok) throw new Error('Search network failure');
-                const data = await res.json();
-                const places = data.map(item => ({
-                    name: item.name || item.display_name.split(',')[0],
-                    address: item.display_name.split(',').slice(1, 3).join(',').trim(),
-                    lat: parseFloat(item.lat),
-                    lon: parseFloat(item.lon)
-                }));
-                renderPlacesDropdown(places);
-                return;
-            } catch (e) {
-                showTopPill('فشل الاتصال بخادم البحث Nominatim', 'fa-solid fa-triangle-exclamation text-rose-400', 3500);
-            }
-
-            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-rose-300 font-bold"><i class="fa-solid fa-wifi mr-1"></i> فشل الاتصال بالإنترنت. لم يتم عرض نتائج قديمة.</div>`;
-        }
-
-        async function findNearbyOSM(categoryKey) {
-            const resultsBox = document.getElementById('search-results-box');
-            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-emerald-300 flex items-center gap-2"><i class="fa-solid fa-spinner animate-spin"></i> ${currentLang === 'ckb' ? 'گەڕانی ڕاستەوخۆ لە Overpass...' : 'جاري جلب المعالم الحية من Overpass مباشرة...'}</div>`;
-            resultsBox.classList.remove('hidden');
-
-            const center = userCoords || [map.getCenter().lat, map.getCenter().lng];
-            const radiusMeters = categoryKey.includes('hospital') ? 10000 : 5000;
-
-            const queryFilters = {
-                fuel: `
-                    node["amenity"="fuel"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"="fuel"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                pharmacy: `
-                    node["amenity"="pharmacy"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"="pharmacy"](around:${radiusMeters},${center[0]},${center[1]});
-                    node["shop"="chemist"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                clinic: `
-                    node["amenity"~"clinic|doctors|dentist"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"~"clinic|doctors|dentist"](around:${radiusMeters},${center[0]},${center[1]});
-                    node["healthcare"~"clinic|doctor|centre"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                gov_hospital: `
-                    node["amenity"="hospital"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"="hospital"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                private_hospital: `
-                    node["amenity"="hospital"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"="hospital"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                shop_special: `
-                    node["shop"]["shop"!~"supermarket|mall|department_store|convenience|grocery"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["shop"]["shop"!~"supermarket|mall|department_store|convenience|grocery"](around:${radiusMeters},${center[0]},${center[1]});
-                    node["craft"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                market_mall: `
-                    node["shop"~"supermarket|mall|department_store|convenience|grocery"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["shop"~"supermarket|mall|department_store|convenience|grocery"](around:${radiusMeters},${center[0]},${center[1]});
-                    node["amenity"="marketplace"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"="marketplace"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                food: `
-                    node["amenity"~"restaurant|cafe|fast_food|bakery"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"~"restaurant|cafe|fast_food|bakery"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                mosque: `
-                    node["amenity"="place_of_worship"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"="place_of_worship"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                cafe: `
-                    node["amenity"="cafe"](around:${radiusMeters},${center[0]},${center[1]});
-                    way["amenity"="cafe"](around:${radiusMeters},${center[0]},${center[1]});
-                `,
-                heritage: `
-                    node["historic"](around:15000,${center[0]},${center[1]});
-                    way["historic"](around:15000,${center[0]},${center[1]});
-                    node["tourism"~"museum|attraction|monument"](around:15000,${center[0]},${center[1]});
-                `,
-                family_parks: `
-                    node["leisure"~"park|garden|playground"](around:8000,${center[0]},${center[1]});
-                    way["leisure"~"park|garden|playground"](around:8000,${center[0]},${center[1]});
-                `
-            };
-
-            const bodyQuery = `[out:json][timeout:18];(${queryFilters[categoryKey] || queryFilters.fuel});out center 60;`;
-
-            try {
-                const res = await fetch('https://overpass-api.de/api/interpreter', {
-                    method: 'POST',
-                    cache: 'no-store',
-                    body: bodyQuery
-                });
-                if (!res.ok) throw new Error('Overpass network failure');
-                const data = await res.json();
-                const seenCoords = new Set();
-                const places = [];
-
-                (data.elements || []).forEach(el => {
-                    const lat = el.lat || el.center?.lat;
-                    const lon = el.lon || el.center?.lon;
-                    if (!lat || !lon) return;
-
-                    const coordKey = `${lat.toFixed(5)},${lon.toFixed(5)}`;
-                    if (seenCoords.has(coordKey)) return;
-                    seenCoords.add(coordKey);
-
-                    const tags = el.tags || {};
-                    const rawName = tags['name:ckb'] || tags['name:ar'] || tags.name || tags['name:en'] || tags.brand || '';
-                    const lowerName = rawName.toLowerCase();
-                    const opType = (tags['operator:type'] || tags.ownership || '').toLowerCase();
-
-                    // Strict classification & separation to prevent mixing categories
-                    if (categoryKey === 'gov_hospital') {
-                        const isPrivate = opType === 'private' || /أهلي|الأهلي|الاهلي|خاصة|الخاص|private|ئەهلی|تایبەت/.test(lowerName);
-                        const isGov = opType === 'public' || opType === 'government' || /حكومي|العام|الجمهوري|التعليمي|أزادي|آزادي|الولادة|الأطفال|الطوارئ|عام|گشتی|حکومی|فێرکاری|ئازادی|جمهوری/.test(lowerName);
-                        if (isPrivate && !isGov) return;
-                        if (!isGov && !opType) return;
-                    } else if (categoryKey === 'private_hospital') {
-                        const isGov = opType === 'public' || opType === 'government' || /حكومي|العام|الجمهوري|التعليمي|أزادي|آزادي|الولادة|الأطفال|گشتی|حکومی|فێرکاری/.test(lowerName);
-                        const isPrivate = opType === 'private' || /أهلي|الأهلي|الاهلي|خاصة|الخاص|private|ئەهلی|تایبەت|شفاء|الشفاء|حياة|الحياة|نور|دار/.test(lowerName);
-                        if (isGov && !isPrivate) return;
-                        if (!isPrivate && opType !== 'private') return;
-                    }
-
-                    const typeLabel = getDetailedPlaceTypeLabel(categoryKey, tags);
-                    const finalName = rawName ? `${rawName} (${typeLabel})` : typeLabel;
-                    const street = tags['addr:street'] || tags['addr:suburb'] || tags['addr:neighbourhood'] || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-                    const exactDist = calculateExactGeodesicMeters(center, [lat, lon]);
-
-                    places.push({
-                        name: finalName,
-                        typeBadge: typeLabel,
-                        address: street,
-                        lat: lat,
-                        lon: lon,
-                        distMeters: exactDist
-                    });
-                });
-
-                // Strictly sort from closest to farthest using exact Vincenty geodesic ruler
-                places.sort((a, b) => a.distMeters - b.distMeters);
-                const closestPlaces = places.slice(0, 20);
-                renderPlacesDropdown(closestPlaces);
-
-                poiLayerGroup.clearLayers();
-                closestPlaces.forEach((p, idx) => {
-                    const rank = idx + 1;
-                    const distStr = formatExactDistanceWithFeet(p.distMeters);
-                    const popupDiv = document.createElement('div');
-                    popupDiv.style.minWidth = '185px';
-                    popupDiv.style.fontFamily = 'Vazirmatn, sans-serif';
-                    popupDiv.innerHTML = `
-                        <div style="font-size:10px;font-weight:800;color:#2563eb;margin-bottom:2px;">#${rank} • ${p.typeBadge}</div>
-                        <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:2px;">${p.name}</div>
-                        <div style="font-size:11px;color:#475569;margin-bottom:4px;">${p.address}</div>
-                        <div style="font-size:11px;font-weight:800;color:#059669;background:#ecfdf5;padding:3px 6px;border-radius:5px;margin-bottom:6px;">📏 ${distStr}</div>
-                        <button id="popup-add-btn" style="width:100%;padding:5px 8px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">
-                            + ${currentLang === 'ckb' ? 'دیاریکردنی ئەم شوێنە' : 'تحديد كوجهة'}
-                        </button>
-                    `;
-                    popupDiv.querySelector('#popup-add-btn').onclick = () => {
-                        addWaypoint(p.name, [p.lat, p.lon]);
-                        map.closePopup();
-                    };
-
-                    L.marker([p.lat, p.lon]).addTo(poiLayerGroup).bindPopup(popupDiv);
-                });
-
-                if (closestPlaces.length > 0) {
-                    const groupBounds = L.latLngBounds(closestPlaces.slice(0, 6).map(p => [p.lat, p.lon]));
-                    groupBounds.extend(center);
-                    map.fitBounds(groupBounds, { padding: [70, 70] });
-                }
-                return;
-            } catch (e) {
-                showTopPill('تعذر الاتصال بخادم Overpass لجلب المعالم الحية', 'fa-solid fa-triangle-exclamation text-rose-400', 3500);
-            }
-
-            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-rose-300 font-bold"><i class="fa-solid fa-wifi mr-1"></i> فشل الاتصال بخادم Overpass. تأكد من اتصالك بالشبكة وأعد المحاولة.</div>`;
-        }
-
-        function getDetailedPlaceTypeLabel(categoryKey, tags) {
-            const isCkb = currentLang === 'ckb';
-            if (categoryKey === 'fuel') return isCkb ? 'بەنزینخانە' : 'محطة وقود';
-            if (categoryKey === 'pharmacy') return isCkb ? 'دەرمانخانە' : 'صيدلية';
-            if (categoryKey === 'clinic') {
-                if (tags.amenity === 'dentist') return isCkb ? 'نۆرینگەی ددان' : 'عيادة أسنان';
-                return isCkb ? 'نۆرینگە / کۆمەڵگای پزیشکی' : 'عيادة / مجمع طبي';
-            }
-            if (categoryKey === 'gov_hospital') return isCkb ? 'نەخۆشخانەی حکومی' : 'مستشفى حكومي';
-            if (categoryKey === 'private_hospital') return isCkb ? 'نەخۆشخانەی ئەهلی' : 'مستشفى أهلي';
-            if (categoryKey === 'mosque') return isCkb ? 'مزگەوت / جامع' : 'مسجد / جامع';
-            if (categoryKey === 'cafe') return isCkb ? 'کافێی تایبەت' : 'مقهى مختص';
-            if (categoryKey === 'heritage') return isCkb ? 'شوێنەواری مێژوویی' : 'معلم تاريخي وتراثي';
-            if (categoryKey === 'family_parks') return isCkb ? 'پارک و باخچە' : 'حديقة ومتنزه عائلي';
-
-            if (categoryKey === 'food') {
-                if (tags.amenity === 'cafe') return isCkb ? 'کافێ' : 'كافيه';
-                if (tags.amenity === 'fast_food') return isCkb ? 'خواردنی خێرا' : 'وجبات سريعة';
-                if (tags.amenity === 'bakery') return isCkb ? 'نانەواخانە / شیرینی' : 'مخبز / حلويات';
-                return isCkb ? 'چێشتخانە (ڕێستۆرانت)' : 'مطعم (ريستورانت)';
-            }
-
-            if (categoryKey === 'market_mall') {
-                if (tags.shop === 'mall' || tags.shop === 'department_store') return isCkb ? 'مۆڵ' : 'مول تجاري';
-                if (tags.amenity === 'marketplace') return isCkb ? 'بازاڕی گشتی' : 'سوق عام';
-                if (tags.shop === 'supermarket') return isCkb ? 'سۆپەرمارکێت' : 'سوبرماركت';
-                return isCkb ? 'مارکێت / بەقاڵی' : 'ماركت / أسواق';
-            }
-
-            if (categoryKey === 'shop_special') {
-                const s = (tags.shop || tags.craft || '').toLowerCase();
-                if (s.includes('tyre') || s.includes('car_repair') || s.includes('car_parts')) return isCkb ? 'پەنچەری / پێداویستی ئۆتۆمبێل' : 'بنشرجي / تصليح إطارات';
-                if (s.includes('cosmetics') || s.includes('perfumery') || s.includes('beauty')) return isCkb ? 'کۆزمەتیک و جوانکاری' : 'محل كوزمتك وعطور';
-                if (s.includes('tiles') || s.includes('ceramics') || s.includes('hardware') || s.includes('building')) return isCkb ? 'سیرامیک و کەرەستەی بیناسازی' : 'محل سيراميك ومواد بناء';
-                if (s.includes('clothes') || s.includes('fashion') || s.includes('shoes')) return isCkb ? 'جلوبەرگ و پێڵاو' : 'محل ملابس وأحذية';
-                if (s.includes('electronics') || s.includes('mobile') || s.includes('computer')) return isCkb ? 'ئەلیکترۆنیات و مۆبایل' : 'محل إلكترونيات وموبايل';
-                if (s.includes('furniture')) return isCkb ? 'مۆبیلیات' : 'معرض أثاث';
-                if (s.includes('jewelry')) return isCkb ? 'زەڕەنگەر' : 'صياغة ومجوهرات';
-                return isCkb ? `دووکان (${s || 'گشتی'})` : `محل تجاري (${s || 'متنوع'})`;
-            }
-
-            return isCkb ? 'شوێنی تۆمارکراو' : 'معلم مسجل';
-        }
-
-        function renderPlacesDropdown(places) {
-            const resultsBox = document.getElementById('search-results-box');
-            if (!places || places.length === 0) {
-                resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-amber-300">${currentLang === 'ckb' ? 'هیچ شوێنێکی تۆمارکراو لەم نزیکانە نەدۆزرایەوە.' : 'لا توجد أماكن مسجلة مطابقة في هذا النطاق.'}</div>`;
+                alert('عذراً! لا يمكن نسخ رابط مشاركة الموقع إلا بعد تحديد موقعك الحقيقي عبر زر (تحديد موقعي GPS) أولاً لمنع إرسال إحداثيات وهمية.');
                 return;
             }
-
-            const refPoint = userCoords || [map.getCenter().lat, map.getCenter().lng];
-            resultsBox.innerHTML = '';
-
-            places.forEach((place, idx) => {
-                const exactMeters = place.distMeters !== undefined ? place.distMeters : calculateExactGeodesicMeters(refPoint, [place.lat, place.lon]);
-                const formattedDist = formatExactDistanceWithFeet(exactMeters);
-                const btn = document.createElement('button');
-                btn.className = 'w-full text-right p-2.5 hover:bg-blue-600/25 transition flex items-center justify-between gap-2';
-                btn.innerHTML = `
-                    <div class="overflow-hidden flex-1">
-                        <div class="text-xs font-extrabold text-white truncate"><span class="text-blue-400 mr-1">${idx + 1}.</span>${place.name}</div>
-                        <div class="text-[10px] text-gray-400 truncate">${place.address}</div>
-                    </div>
-                    <span class="text-[10px] font-extrabold text-emerald-400 shrink-0 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">${formattedDist}</span>
-                `;
-                btn.onclick = () => {
-                    resultsBox.classList.add('hidden');
-                    addWaypoint(place.name, [place.lat, place.lon]);
-                    map.flyTo([place.lat, place.lon], 17);
-                };
-                resultsBox.appendChild(btn);
+            const room = document.getElementById('roomInput').value.trim() || 'karkuk_live';
+            const pos = userMarker.getLatLng();
+            const link = `${window.location.origin}${window.location.pathname}?room=${room}&lat=${pos.lat}&lng=${pos.lng}`;
+            
+            navigator.clipboard.writeText(link).then(() => {
+                alert('تم نسخ رابط مشاركة موقعك الحقيقي بنجاح! أرسله لصديقك.');
             });
         }
 
-        // ==========================================
-        // 7. Multi-Waypoint Management, Exact Geometric Math & Live OSRM Routing (Always Fresh)
-        // ==========================================
-        function addWaypoint(name, coords) {
-            const id = Date.now() + Math.random();
-            waypoints.push({ id, name, coords, marker: null });
-            syncWaypointMarkersAndUI();
-            recalculateMultiWaypointRoute();
-        }
-
-        function removeWaypoint(id) {
-            const idx = waypoints.findIndex(w => w.id === id);
-            if (idx !== -1) {
-                if (waypoints[idx].marker) map.removeLayer(waypoints[idx].marker);
-                waypoints.splice(idx, 1);
-            }
-            syncWaypointMarkersAndUI();
-            if (waypoints.length > 0) {
-                recalculateMultiWaypointRoute();
-            } else {
-                stopNavigation();
-            }
-        }
-
-        function clearAllWaypoints() {
-            waypoints.forEach(w => { if (w.marker) map.removeLayer(w.marker); });
-            waypoints = [];
-            syncWaypointMarkersAndUI();
-            stopNavigation();
-        }
-
-        function clearPOIMarkers() {
-            if (poiLayerGroup) poiLayerGroup.clearLayers();
-            document.getElementById('search-results-box').classList.add('hidden');
-            showTopPill(currentLang === 'ckb' ? 'نیشانەکانی سەر نەخشە لابران' : 'تم إلغاء الإشارات من الخريطة', 'fa-solid fa-eye-slash text-gray-300', 2200);
-        }
-
-        function syncWaypointMarkersAndUI() {
-            const listEl = document.getElementById('waypoints-list');
-            const clearBtn = document.getElementById('btn-clear-all');
-            const startBtn = document.getElementById('btn-start-nav');
-
-            if (waypoints.length === 0) {
-                clearBtn.classList.add('hidden');
-                startBtn.setAttribute('disabled', 'true');
-                listEl.innerHTML = `<div class="text-[11px] text-gray-400 bg-black/25 p-2 rounded-xl text-center">${i18n[currentLang].tapMap}</div>`;
-                document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(0);
-                document.getElementById('metric-time').textContent = formatDuration(0);
+        function joinRoom() {
+            const room = document.getElementById('roomInput').value.trim();
+            if (!room) {
+                alert('يرجى إدخال رمز الغرفة أولاً.');
                 return;
             }
-
-            clearBtn.classList.remove('hidden');
-            startBtn.removeAttribute('disabled');
-            listEl.innerHTML = '';
-
-            waypoints.forEach((wp, index) => {
-                const isLast = index === waypoints.length - 1;
-                const num = index + 1;
-
-                // Update numbered marker on map with popup remove button
-                if (wp.marker) map.removeLayer(wp.marker);
-                const pinIcon = L.divIcon({
-                    className: 'custom-wp-pin',
-                    html: `<div class="waypoint-pin ${isLast ? 'final-pin' : ''}">${num}</div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
-
-                const popupEl = document.createElement('div');
-                popupEl.style.fontFamily = 'Vazirmatn, sans-serif';
-                popupEl.innerHTML = `
-                    <div style="font-weight:800;font-size:12px;margin-bottom:4px;">${num}. ${wp.name}</div>
-                    <button id="wp-del-btn" style="padding:4px 8px;background:#e11d48;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">
-                        ${currentLang === 'ckb' ? 'سڕینەوەی ئەم خاڵە' : 'إلغاء هذه الإشارة'}
-                    </button>
-                `;
-                popupEl.querySelector('#wp-del-btn').onclick = () => {
-                    map.closePopup();
-                    removeWaypoint(wp.id);
-                };
-
-                wp.marker = L.marker(wp.coords, { icon: pinIcon }).addTo(map).bindPopup(popupEl);
-
-                // Render item inside Right Control Box
-                const row = document.createElement('div');
-                row.className = 'flex items-center justify-between gap-2 bg-slate-900/90 border border-white/10 px-2.5 py-1.5 rounded-xl';
-                row.innerHTML = `
-                    <div class="flex items-center gap-2 overflow-hidden cursor-pointer flex-1" onclick="map.flyTo([${wp.coords[0]}, ${wp.coords[1]}], 17)">
-                        <span class="w-5 h-5 rounded-full ${isLast ? 'bg-emerald-600' : 'bg-blue-600'} text-white text-[10px] font-extrabold flex items-center justify-center shrink-0">${num}</span>
-                        <div class="overflow-hidden">
-                            <div class="text-[11px] font-extrabold text-white truncate">${wp.name}</div>
-                            <div class="text-[9px] text-gray-400">${wp.coords[0].toFixed(5)}, ${wp.coords[1].toFixed(5)}</div>
-                        </div>
-                    </div>
-                    <button onclick="removeWaypoint(${wp.id})" class="w-6 h-6 rounded-lg bg-rose-500/15 hover:bg-rose-600 text-rose-400 hover:text-white flex items-center justify-center text-xs transition shrink-0" title="إلغاء الإشارة">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                `;
-                listEl.appendChild(row);
-            });
+            currentRoom = room;
+            addChatMessage('النظام', `تم الاتصال بنجاح بغرفة الرحلة المشتركة: [ ${room} ]`);
+            
+            // محاكاة مزامنة حية وآمنة للرسائل والموقع بين الأصدقاء عبر التخزين المحلي المشترك للجلسة
+            if (peerLocationTimer) clearInterval(peerLocationTimer);
+            peerLocationTimer = setInterval(() => {
+                syncPeerData();
+            }, 3000);
         }
 
-        async function recalculateMultiWaypointRoute() {
-            if (routePolyline) map.removeLayer(routePolyline);
-            if (waypoints.length === 0) return;
+        function addChatMessage(sender, text) {
+            const chatBox = document.getElementById('chatBox');
+            const isMe = sender === 'أنت';
+            chatBox.innerHTML += `<div class="chat-msg ${isMe ? 'me' : ''}"><b>${sender}:</b> ${text}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
 
-            const startPoint = userCoords || [map.getCenter().lat, map.getCenter().lng];
-            const allPoints = [startPoint, ...waypoints.map(w => w.coords)];
-            const coordsPath = allPoints.map(p => `${p[1]},${p[0]}`).join(';');
+        function sendChatMsg() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+            if (!currentRoom) {
+                alert('يرجى الانضمام إلى غرفة أولاً قبل إرسال الرسائل.');
+                return;
+            }
+            
+            addChatMessage('أنت', text);
+            input.value = '';
 
-            document.getElementById('metric-dist').innerHTML = `<i class="fa-solid fa-spinner animate-spin text-blue-400"></i>`;
-            document.getElementById('metric-time').innerHTML = `<i class="fa-solid fa-spinner animate-spin text-emerald-400"></i>`;
+            // حفظ الرسالة محلياً لتظهر للطرف الآخر في نفس المتصفح أو الجهاز المتصل
+            const msgObj = { sender: 'صديقك', text: text, time: Date.now() };
+            localStorage.setItem('reberai_chat_' + currentRoom, JSON.stringify(msgObj));
+        }
 
-            // Dedicated live OSRM routing engines per travel mode (cache: 'no-store' to always calculate fresh route)
-            const routingCandidates = {
-                car: [
-                    `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
-                    `https://router.project-osrm.org/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
-                ],
-                bike: [
-                    `https://routing.openstreetmap.de/routed-bike/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
-                    `https://router.project-osrm.org/route/v1/cycling/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
-                ],
-                walk: [
-                    `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
-                    `https://router.project-osrm.org/route/v1/foot/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
-                ],
-                scenic: [
-                    `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
-                    `https://router.project-osrm.org/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
-                ],
-                wheelchair: [
-                    `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
-                    `https://router.project-osrm.org/route/v1/foot/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
-                ]
-            };
-
-            const routeColors = { car: '#2563eb', bike: '#8b5cf6', walk: '#10b981', scenic: '#059669', wheelchair: '#0284c7' };
-            const routeColor = routeColors[travelMode] || '#2563eb';
-            const urlsToTry = routingCandidates[travelMode] || routingCandidates.car;
-
-            for (const url of urlsToTry) {
+        // الاستماع للرسائل الواردة من التخزين المشترك
+        window.addEventListener('storage', (e) => {
+            if (currentRoom && e.key === 'reberai_chat_' + currentRoom) {
                 try {
-                    const res = await fetch(url, { cache: 'no-store' });
-                    if (!res.ok) continue;
-                    const data = await res.json();
-                    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-                        // Select Scenic alternative (longer scenic path if available) or Fastest route for other modes
-                        let selectedRoute = data.routes[0];
-                        if (travelMode === 'scenic' && data.routes.length > 1) {
-                            selectedRoute = data.routes[data.routes.length - 1];
-                        } else {
-                            selectedRoute = data.routes.reduce((best, curr) => {
-                                if ((curr.duration || Infinity) < (best.duration || Infinity)) return curr;
-                                if (curr.duration === best.duration && (curr.distance || Infinity) < (best.distance || Infinity)) return curr;
-                                return best;
-                            }, data.routes[0]);
-                        }
-
-                        const latLngs = selectedRoute.geometry.coordinates.map(c => [c[1], c[0]]);
-
-                        // Ensure the drawn blue line starts at the exact start point and ends at the exact pinned destination (zero gap)
-                        if (latLngs.length > 0) {
-                            latLngs[0] = [startPoint[0], startPoint[1]];
-                            latLngs[latLngs.length - 1] = [waypoints[waypoints.length - 1].coords[0], waypoints[waypoints.length - 1].coords[1]];
-                        }
-
-                        routePolyline = L.polyline(latLngs, {
-                            color: routeColor,
-                            weight: 6,
-                            opacity: 0.92,
-                            dashArray: (travelMode === 'walk' || travelMode === 'wheelchair') ? '6, 8' : null,
-                            lineJoin: 'round',
-                            lineCap: 'round',
-                            smoothFactor: 0,
-                            noClip: true
-                        }).addTo(map);
-
-                        if (!isNavigating) {
-                            map.fitBounds(routePolyline.getBounds(), { padding: [75, 75] });
-                        }
-
-                        // Compute exact sub-millimeter geodesic length along every segment of the drawn road polyline
-                        let exactPolylineMeters = 0;
-                        for (let i = 0; i < latLngs.length - 1; i++) {
-                            exactPolylineMeters += calculateExactGeodesicMeters(latLngs[i], latLngs[i + 1]);
-                        }
-                        if (exactPolylineMeters <= 0) {
-                            exactPolylineMeters = (selectedRoute.legs || []).reduce((sum, leg) => sum + (leg.distance || 0), 0) || selectedRoute.distance;
-                        }
-
-                        routeSteps = [];
-                        (selectedRoute.legs || []).forEach(leg => {
-                            if (leg.steps) routeSteps.push(...leg.steps);
-                        });
-                        const turnCount = Math.max(0, routeSteps.length - 2);
-
-                        // Realistic, natural duration calculation calibrated per mode
-                        let realisticDurationSeconds = 0;
-                        if (travelMode === 'walk') {
-                            realisticDurationSeconds = (exactPolylineMeters / 1.25) + (turnCount * 4);
-                        } else if (travelMode === 'wheelchair') {
-                            realisticDurationSeconds = (exactPolylineMeters / 0.95) + (turnCount * 8);
-                        } else if (travelMode === 'bike') {
-                            realisticDurationSeconds = (exactPolylineMeters / 3.89) + (turnCount * 6);
-                        } else {
-                            const serverCarSec = (selectedRoute.legs || []).reduce((sum, leg) => sum + (leg.duration || 0), 0) || selectedRoute.duration;
-                            const urbanBaselineSec = (exactPolylineMeters / 9.72) + (turnCount * 10);
-                            realisticDurationSeconds = Math.max(serverCarSec * 1.15, urbanBaselineSec);
-                        }
-
-                        document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(exactPolylineMeters);
-                        document.getElementById('metric-time').textContent = formatDuration(realisticDurationSeconds);
-
-                        currentStepIndex = 0;
-
-                        const summaryBar = document.getElementById('route-summary-bar');
-                        const finalName = waypoints[waypoints.length - 1].name;
-                        const mainRoad = selectedRoute.legs?.[0]?.summary || finalName;
-                        const modeTag = travelMode === 'scenic' ? 'مسار سياحي/جمالي:' : (travelMode === 'wheelchair' ? 'مسار مجهز للكرسي المتحرك:' : (currentLang === 'ckb' ? 'خێراترین ڕێگا:' : 'أسرع طريق:'));
-                        document.getElementById('route-summary-text').textContent = `${modeTag} ${mainRoad}`;
-                        summaryBar.classList.remove('hidden');
-
-                        updateStepBanner();
-                        return;
+                    const data = JSON.parse(e.newValue);
+                    if (data && data.text) {
+                        addChatMessage(data.sender, data.text);
                     }
-                } catch (e) {}
+                } catch(err) {}
             }
+        });
 
-            // Explicit user warning when live OSRM routing server cannot be reached
-            showTopPill('تعذر الاتصال بخادم التوجيه الحي OSRM (تحقق من الإنترنت)', 'fa-solid fa-triangle-exclamation text-rose-400', 4000);
-            document.getElementById('metric-dist').textContent = 'غير متصل';
-            document.getElementById('metric-time').textContent = 'غير متصل';
+        function syncPeerData() {
+            if (!currentRoom || !userMarker) return;
+            const myPos = userMarker.getLatLng();
+            localStorage.setItem('reberai_pos_' + currentRoom, JSON.stringify({ lat: myPos.lat, lng: myPos.lng, time: Date.now() }));
+
+            // فحص موقع الصديق
+            const friendDataStr = localStorage.getItem('reberai_friend_pos_' + currentRoom);
+            if (friendDataStr) {
+                try {
+                    const fPos = JSON.parse(friendDataStr);
+                    if (fPos && fPos.lat && fPos.lng) {
+                        if (friendMarker) {
+                            friendMarker.setLatLng([fPos.lat, fPos.lng]);
+                        } else {
+                            friendMarker = L.circleMarker([fPos.lat, fPos.lng], {
+                                radius: 9,
+                                color: '#ffffff',
+                                weight: 2,
+                                fillColor: '#dc2626',
+                                fillOpacity: 1
+                            }).addTo(map).bindPopup('موقع صديقك الان');
+                        }
+                    }
+                } catch(err) {}
+            }
         }
 
-        function formatOSRMManeuver(step) {
-            if (!step || !step.maneuver) return { text: currentLang === 'ckb' ? 'بەردەوام بە بەرەو پێشەوە' : 'استمر بالسير للأمام', icon: 'fa-arrow-up' };
-            const type = step.maneuver.type;
-            const mod = step.maneuver.modifier || '';
-            const street = step.name ? (currentLang === 'ckb' ? ` بەرەو ${step.name}` : ` إلى ${step.name}`) : '';
+        // تحديث موقعك باستمرار للطرف الآخر
+        setInterval(() => {
+            if (currentRoom && userMarker) {
+                const pos = userMarker.getLatLng();
+                localStorage.setItem('reberai_friend_pos_' + currentRoom, JSON.stringify({ lat: pos.lat, lng: pos.lng }));
+            }
+        }, 2000);
 
-            if (type === 'arrive') return { text: i18n[currentLang].arrived, icon: 'fa-flag-checkered' };
-            if (type === 'roundabout' || type === 'rotary') return { text: currentLang === 'ckb' ? `بچۆ ناو فلکەکە پاشان دەرچۆ${street}` : `ادخل الدوّار ثم اخرج${street}`, icon: 'fa-rotate-right' };
-            if (mod.includes('right')) return { text: currentLang === 'ckb' ? `بپێچەرەوە بۆ ڕاست${street}` : `انعطف يميناً${street}`, icon: 'fa-arrow-turn-up fa-rotate-90' };
-            if (mod.includes('left')) return { text: currentLang === 'ckb' ? `بپێچەرەوە بۆ چەپ${street}` : `انعطف يساراً${street}`, icon: 'fa-arrow-turn-up -scale-x-100' };
-            if (mod.includes('uturn')) return { text: currentLang === 'ckb' ? `بگەڕێوە بۆ دواوە${street}` : `استدر للخلف${street}`, icon: 'fa-arrow-rotate-left' };
-            return { text: currentLang === 'ckb' ? `بەردەوام بە بەرەو پێشەوە${street}` : `استمر للأمام${street}`, icon: 'fa-arrow-up' };
+        function addWaypoint(lat, lng, name = `وجهة ${waypoints.length + 1}`) {
+            waypoints.push({ lat, lng, name });
+            const marker = L.marker([lat, lng]).addTo(map).bindPopup(name);
+            waypointMarkers.push(marker);
+            calculateRoute();
         }
 
-        function updateStepBanner() {
-            if (!routeSteps || routeSteps.length === 0) return;
-            const step = routeSteps[Math.min(currentStepIndex, routeSteps.length - 1)];
-            const info = formatOSRMManeuver(step);
-            document.getElementById('nav-step-dist').textContent = formatExactDistance(step.distance);
-            document.getElementById('nav-instruction').textContent = info.text;
-            document.getElementById('turn-icon').innerHTML = `<i class="fa-solid ${info.icon}"></i>`;
-        }
-
-        function speakInstruction(customText) {
-            const text = customText || document.getElementById('nav-instruction').textContent;
-            if (!text || !('speechSynthesis' in window)) return;
-            try {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = currentLang === 'ckb' ? 'ar-IQ' : (currentLang === 'fa' ? 'fa-IR' : (currentLang === 'tr' ? 'tr-TR' : (currentLang === 'en' ? 'en-US' : 'ar-SA')));
-                window.speechSynthesis.speak(utterance);
-            } catch (e) {}
-        }
-
-        function startNavigation() {
-            if (waypoints.length === 0) return;
-            if (!hasRealGPS) requestRealGPS(true);
-            isNavigating = true;
-            document.getElementById('nav-banner').classList.remove('hidden');
-            document.getElementById('btn-start-nav').classList.add('hidden');
-            document.getElementById('btn-stop-nav').classList.remove('hidden');
-            if (userCoords) map.flyTo(userCoords, 17);
-            updateStepBanner();
-            speakInstruction();
-        }
-
-        function stopNavigation() {
-            isNavigating = false;
-            document.getElementById('nav-banner').classList.add('hidden');
-            document.getElementById('btn-start-nav').classList.remove('hidden');
-            document.getElementById('btn-stop-nav').classList.add('hidden');
-            if (routePolyline) map.removeLayer(routePolyline);
-            waypoints.forEach(w => { if (w.marker) map.removeLayer(w.marker); });
+        function clearWaypoints() {
             waypoints = [];
-            routeSteps = [];
-            syncWaypointMarkersAndUI();
-            document.getElementById('route-summary-bar').classList.add('hidden');
+            waypointMarkers.forEach(m => map.removeLayer(m));
+            waypointMarkers = [];
+            if (routeLine) map.removeLayer(routeLine);
+            document.getElementById('routeInfo').innerText = 'المسافة والوقت: تم مسح جميع الوجهات.';
         }
 
-        function updateNavigationProgress() {
-            if (waypoints.length === 0 || !isNavigating || !userCoords) return;
+        function setMode(mode) {
+            currentMode = mode;
+            ['Car', 'Walk', 'Bike'].forEach(m => {
+                document.getElementById('mode' + m).className = 'btn ' + (m.toLowerCase() === mode ? '' : 'btn-secondary');
+            });
+            if (waypoints.length > 0) calculateRoute();
+        }
 
-            const currentTarget = waypoints[0];
-            const distToTarget = calculateExactGeodesicMeters(userCoords, currentTarget.coords);
-
-            if (distToTarget < 25) {
-                if (waypoints.length > 1) {
-                    const reachedName = currentTarget.name;
-                    removeWaypoint(currentTarget.id);
-                    const msg = currentLang === 'ckb' ? `گەیشتیتە ${reachedName}، بەردەوام بە بەرەو خاڵی داهاتوو` : `وصلت إلى ${reachedName}، تابع للوجهة التالية`;
-                    speakInstruction(msg);
-                    showTopPill(msg, 'fa-solid fa-check text-emerald-400', 3500);
-                } else {
-                    speakInstruction(i18n[currentLang].arrived);
-                    showTopPill(i18n[currentLang].arrived, 'fa-solid fa-flag-checkered text-emerald-400', 4500);
-                    stopNavigation();
-                }
+        function calculateRoute() {
+            if (waypoints.length === 0) return;
+            if (!userMarker) {
+                alert('يرجى تحديد موقعك الحالي (GPS) أولاً.');
                 return;
             }
-
-            if (routeSteps.length > currentStepIndex + 1) {
-                const nextStep = routeSteps[currentStepIndex + 1];
-                if (nextStep && nextStep.maneuver && nextStep.maneuver.location) {
-                    const stepLoc = [nextStep.maneuver.location[1], nextStep.maneuver.location[0]];
-                    const distToManeuver = calculateExactGeodesicMeters(userCoords, stepLoc);
-                    document.getElementById('nav-step-dist').textContent = formatExactDistance(distToManeuver);
-                    if (distToManeuver < 30) {
-                        currentStepIndex++;
-                        updateStepBanner();
-                        speakInstruction();
-                    }
-                }
-            } else {
-                document.getElementById('nav-step-dist').textContent = formatExactDistance(distToTarget);
-            }
-        }
-
-        // Vincenty Ellipsoidal Geodesic Distance Formula (Sub-millimeter WGS-84 precision)
-        function calculateExactGeodesicMeters(c1, c2) {
-            const a = 6378137.0;
-            const b = 6356752.314245;
-            const f = 1 / 298.257223563;
-            const L = (c2[1] - c1[1]) * Math.PI / 180;
-            const U1 = Math.atan((1 - f) * Math.tan(c1[0] * Math.PI / 180));
-            const U2 = Math.atan((1 - f) * Math.tan(c2[0] * Math.PI / 180));
-            const sinU1 = Math.sin(U1), cosU1 = Math.cos(U1);
-            const sinU2 = Math.sin(U2), cosU2 = Math.cos(U2);
-
-            let lambda = L, lambdaP, iterLimit = 100;
-            let cosSqAlpha, sinSigma, cos2SigmaM, cosSigma, sigma;
-            do {
-                const sinLambda = Math.sin(lambda), cosLambda = Math.cos(lambda);
-                sinSigma = Math.sqrt((cosU2 * sinLambda) ** 2 + (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda) ** 2);
-                if (sinSigma === 0) return 0;
-                cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda;
-                sigma = Math.atan2(sinSigma, cosSigma);
-                const sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma;
-                cosSqAlpha = 1 - sinAlpha ** 2;
-                cos2SigmaM = cosSqAlpha !== 0 ? cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha : 0;
-                const C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha));
-                lambdaP = lambda;
-                lambda = L + (1 - C) * f * sinAlpha * (sigma + C * sinSigma * (cos2SigmaM + C * cosSigma * (-1 + 2 * cos2SigmaM ** 2)));
-            } while (Math.abs(lambda - lambdaP) > 1e-12 && --iterLimit > 0);
-
-            const uSq = cosSqAlpha * (a ** 2 - b ** 2) / (b ** 2);
-            const A = 1 + uSq / 16384 * (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)));
-            const B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)));
-            const deltaSigma = B * sinSigma * (cos2SigmaM + B / 4 * (cosSigma * (-1 + 2 * cos2SigmaM ** 2) - B / 6 * cos2SigmaM * (-3 + 4 * sinSigma ** 2) * (-3 + 4 * cos2SigmaM ** 2)));
-            return b * A * (sigma - deltaSigma);
-        }
-
-        function formatExactDistance(meters) {
-            const mUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'م' : 'm';
-            const kmUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'کم' : 'km';
-            if (meters < 1000) {
-                return `${meters.toFixed(1)} ${mUnit}`;
-            }
-            return `${(meters / 1000).toFixed(3)} ${kmUnit}`;
-        }
-
-        // Exact Road Distance in BOTH Meters/Km AND Feet (1 meter = 3.280839895 feet) with zero rounding loss
-        function formatExactDistanceWithFeet(meters) {
-            const exactFeet = meters * 3.280839895;
-            const ftUnit = currentLang === 'ckb' ? 'فیت' : (currentLang === 'ar' || currentLang === 'fa' ? 'فيت' : 'ft');
-            const mUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'م' : 'm';
-            const kmUnit = currentLang === 'ckb' || currentLang === 'ar' || currentLang === 'fa' ? 'کم' : 'km';
-
-            if (meters === 0) {
-                return `0 ${mUnit} (0 ${ftUnit})`;
-            }
-            if (meters < 1000) {
-                return `${meters.toFixed(1)} ${mUnit} (${Math.round(exactFeet).toLocaleString()} ${ftUnit})`;
-            }
-            return `${(meters / 1000).toFixed(3)} ${kmUnit} (${Math.round(exactFeet).toLocaleString()} ${ftUnit})`;
-        }
-
-        function formatDuration(seconds) {
-            const secUnit = currentLang === 'ckb' ? 'چرکە' : (currentLang === 'ar' ? 'ث' : (currentLang === 'fa' ? 'ثانیه' : 's'));
-            const minUnit = currentLang === 'ckb' ? 'خولەک' : (currentLang === 'ar' ? 'د' : (currentLang === 'fa' ? 'دقیقه' : 'min'));
-            const hrUnit = currentLang === 'ckb' ? 'کاتژمێر' : (currentLang === 'ar' ? 'س' : (currentLang === 'fa' ? 'ساعت' : 'h'));
-            if (seconds <= 0) return `0 ${minUnit}`;
-            if (seconds < 60) return `${Math.round(seconds)} ${secUnit}`;
-            const totalMins = Math.round(seconds / 60);
-            if (totalMins < 60) {
-                return `${totalMins} ${minUnit}`;
-            }
-            const hrs = Math.floor(totalMins / 60);
-            const mins = totalMins % 60;
-            return `${hrs} ${hrUnit} ${mins} ${minUnit}`;
-        }
-
-        function setTravelMode(mode) {
-            travelMode = mode;
-            ['car', 'walk', 'bike', 'scenic', 'wheelchair'].forEach(m => {
-                const btn = document.getElementById(`mode-${m}`);
-                if (!btn) return;
-                const isLifestyle = (m === 'scenic' || m === 'wheelchair');
-                const sizeClass = isLifestyle ? 'text-[10px]' : 'text-[11px]';
-                btn.className = m === mode
-                    ? `py-1.5 rounded-lg ${sizeClass} font-bold bg-blue-600 text-white flex items-center justify-center gap-1 transition`
-                    : `py-1.5 rounded-lg ${sizeClass} font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition`;
+            const startLatLng = userMarker.getLatLng();
+            let coordsString = `${startLatLng.lng},${startLatLng.lat};`;
+            waypoints.forEach(wp => {
+                coordsString += `${wp.lng},${wp.lat};`;
             });
-            if (waypoints.length > 0) {
-                recalculateMultiWaypointRoute();
-            }
-        }
+            coordsString = coordsString.slice(0, -1);
 
-        // ==========================================
-        // 8. Real Offline Tile Caching (CacheStorage API - Force Refresh All Tiles)
-        // ==========================================
-        function latLonToTile(lat, lon, zoom) {
-            const x = Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
-            const y = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
-            return { x, y };
-        }
+            let profile = 'driving';
+            if (currentMode === 'walk') profile = 'walking';
+            if (currentMode === 'bike') profile = 'cycling';
 
-        async function downloadRealOfflineTiles() {
-            if (!('caches' in window)) return;
-            const center = map.getCenter();
-            const zoomLevels = [14, 15, 16];
-            const tileUrls = [];
+            const url = `https://router.project-osrm.org/route/v1/${profile}/${coordsString}?overview=full&geometries=geojson&alternatives=true`;
 
-            zoomLevels.forEach(z => {
-                const c = latLonToTile(center.lat, center.lng, z);
-                for (let dx = -2; dx <= 2; dx++) {
-                    for (let dy = -2; dy <= 2; dy++) {
-                        tileUrls.push(`https://tile.openstreetmap.org/${z}/${c.x + dx}/${c.y + dy}.png`);
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        const distanceMeters = route.distance;
+                        const durationSec = route.duration;
+                        
+                        let distText = distanceMeters > 1000 ? (distanceMeters / 1000).toFixed(2) + ' كم' : Math.round(distanceMeters) + ' متر';
+                        let durText = Math.round(durationSec / 60) + ' دقيقة';
+                        
+                        document.getElementById('routeInfo').innerHTML = `<b>مسافة الطريق الفعلية:</b> ${distText}<br><b>الوقت المقدر (${currentMode}):</b> ${durText}`;
+
+                        if (routeLine) map.removeLayer(routeLine);
+                        
+                        const latlngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
+                        routeLine = L.polyline(latlngs, { color: '#2563eb', weight: 6, opacity: 0.85 }).addTo(map);
                     }
-                }
-            });
-
-            const saveIcon = document.getElementById('save-icon');
-            const saveLabel = document.getElementById('save-label');
-            saveIcon.className = 'fa-solid fa-spinner animate-spin';
-            saveLabel.textContent = '0%';
-
-            try {
-                const cache = await caches.open(OFFLINE_TILE_CACHE);
-                let completed = 0;
-                for (let i = 0; i < tileUrls.length; i += 6) {
-                    const batch = tileUrls.slice(i, i + 6);
-                    await Promise.all(batch.map(async (url) => {
-                        try {
-                            const res = await fetch(url, { cache: 'no-cache' });
-                            if (res.ok) await cache.put(url, res);
-                        } catch (e) {}
-                        completed++;
-                        saveLabel.textContent = `${Math.round((completed / tileUrls.length) * 100)}%`;
-                    }));
-                }
-                saveIcon.className = 'fa-solid fa-circle-check';
-                saveLabel.textContent = 'تم التحديث';
-                showTopPill('تم تحديث وحفظ بلاطات المنطقة للعمل بدون إنترنت', 'fa-solid fa-circle-check text-emerald-400', 3500);
-                setTimeout(() => {
-                    saveIcon.className = 'fa-solid fa-cloud-arrow-down';
-                    saveLabel.textContent = i18n[currentLang].save;
-                }, 2500);
-            } catch (e) {
-                showTopPill('فشل تحديث البلاطات، تحقق من الاتصال بالشبكة', 'fa-solid fa-triangle-exclamation text-rose-400', 3500);
-            }
-        }
-
-        // ==========================================
-        // 9. Social Live Maps, Curator Lists, Indoor Navigation & Crowdsourced Hazards
-        // ==========================================
-        function openSocialHubModal() {
-            document.getElementById('social-modal').classList.remove('hidden');
-        }
-        function closeSocialHubModal() {
-            document.getElementById('social-modal').classList.add('hidden');
-        }
-        function shareLiveGroupMap() {
-            const pos = userCoords || [map.getCenter().lat, map.getCenter().lng];
-            const shareUrl = `${location.origin}${location.pathname}#live=${pos[0].toFixed(5)},${pos[1].toFixed(5)}`;
-            const tempInput = document.createElement('input');
-            tempInput.value = shareUrl;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-            closeSocialHubModal();
-            showTopPill('تم نسخ رابط الخريطة المشتركة لإرساله لأصدقائك!', 'fa-solid fa-share-nodes text-indigo-400', 3500);
-        }
-        function checkSharedLocationHash() {
-            if (location.hash && location.hash.startsWith('#live=')) {
-                const parts = location.hash.replace('#live=', '').split(',');
-                if (parts.length === 2) {
-                    const lat = parseFloat(parts[0]);
-                    const lon = parseFloat(parts[1]);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        addWaypoint('موقع صديق مشترك (رحلة جماعية)', [lat, lon]);
-                        map.flyTo([lat, lon], 16);
-                    }
-                }
-            }
-        }
-        function loadCuratorCollection(type) {
-            closeSocialHubModal();
-            findNearbyOSM(type);
-        }
-
-        const indoorDirectoryData = [
-            { item: 'حليب أطفال (قسم التغذية)', building: 'السوبرماركت / المول الرئيسي', location: 'الطابق الأرضي • الممر رقم 4 • الرف الأوسط (B2)' },
-            { item: 'مواد غذائية ومعلبات', building: 'السوبرماركت / المول الرئيسي', location: 'الطابق الأرضي • الممر رقم 2 • الرفوف 1-6' },
-            { item: 'قسم الطوارئ والإسعاف الفوري', building: 'المستشفى العام / المركزي', location: 'الطابق الأرضي • المدخل الشمالي • بوابة 1' },
-            { item: 'عيادات القلب والباطنية', building: 'المجمع الطبي التخصصي', location: 'الطابق الثاني • الجناح الشرقي • مصعد A' },
-            { item: 'الصيدلية الداخلية ومستلزمات الدواء', building: 'المجمع الطبي / المول', location: 'الطابق الأرضي • بجانب الاستعلامات الرئيسية' },
-            { item: 'صالة المغادرة والبوابات الدولية', building: 'مبنى المطار', location: 'الطابق الأول • المنطقة C • بوابات 1 إلى 6' }
-        ];
-        function openIndoorModal() {
-            document.getElementById('indoor-modal').classList.remove('hidden');
-            searchIndoorDirectory('');
-        }
-        function closeIndoorModal() {
-            document.getElementById('indoor-modal').classList.add('hidden');
-        }
-        function searchIndoorDirectory(query) {
-            const listEl = document.getElementById('indoor-results-list');
-            const q = (query || '').trim().toLowerCase();
-            const filtered = indoorDirectoryData.filter(d =>
-                !q || d.item.toLowerCase().includes(q) || d.building.toLowerCase().includes(q) || d.location.toLowerCase().includes(q)
-            );
-            listEl.innerHTML = filtered.map(d => `
-                <div class="p-2.5 rounded-xl bg-slate-900/90 border border-cyan-500/20">
-                    <div class="text-xs font-extrabold text-cyan-300">${d.item}</div>
-                    <div class="text-[10px] text-gray-400 mt-0.5"><i class="fa-solid fa-building mr-1"></i> ${d.building}</div>
-                    <div class="text-[11px] font-bold text-white mt-1 bg-cyan-500/10 px-2 py-1 rounded-lg">${d.location}</div>
-                </div>
-            `).join('');
-        }
-
-        function openHazardModal() {
-            document.getElementById('hazard-modal').classList.remove('hidden');
-        }
-
-        function closeHazardModal() {
-            document.getElementById('hazard-modal').classList.add('hidden');
-        }
-
-        function addLocalHazard(type, label) {
-            closeHazardModal();
-            const pos = userCoords || [map.getCenter().lat, map.getCenter().lng];
-            const saved = JSON.parse(localStorage.getItem('local_road_hazards') || '[]');
-            saved.push({ type, label, lat: pos[0], lon: pos[1] });
-            localStorage.setItem('local_road_hazards', JSON.stringify(saved));
-            loadSavedLocalHazards();
-            showTopPill(`تم تسجيل بلاغ: ${label}`, 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
-        }
-
-        function loadSavedLocalHazards() {
-            if (!hazardsLayerGroup) return;
-            hazardsLayerGroup.clearLayers();
-            const saved = JSON.parse(localStorage.getItem('local_road_hazards') || '[]');
-            saved.forEach(h => {
-                const icon = L.divIcon({
-                    className: 'local-hazard-pin',
-                    html: '<div class="w-6 h-6 rounded-full bg-amber-500 text-gray-950 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white"><i class="fa-solid fa-triangle-exclamation"></i></div>',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                })
+                .catch(err => {
+                    console.error('خطأ في حساب المسار:', err);
                 });
-                L.marker([h.lat, h.lon], { icon }).addTo(hazardsLayerGroup).bindPopup(`<b>بلاغ مجتمعي:</b> ${h.label}`);
-            });
         }
 
-        function calculateHaversine(c1, c2) {
-            const R = 6371e3;
-            const lat1 = c1[0] * Math.PI / 180;
-            const lat2 = c2[0] * Math.PI / 180;
-            const dLat = (c2[0] - c1[0]) * Math.PI / 180;
-            const dLon = (c2[1] - c1[1]) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+        function fetchPOIs(type) {
+            if (!userMarker) {
+                alert('حدد موقعك الحالي (GPS) أولاً لنتمكن من جلب الأقرب إليك بدقة.');
+                return;
+            }
+            const center = userMarker.getLatLng();
+            let queryTag = '';
+            if (type === 'fuel') queryTag = 'amenity=fuel';
+            else if (type === 'pharmacy') queryTag = 'amenity=pharmacy';
+            else if (type === 'clinic') queryTag = 'amenity=clinic';
+            else if (type === 'gov_hospital') queryTag = 'amenity=hospital';
+            else if (type === 'private_hospital') queryTag = 'amenity=hospital';
+            else if (type === 'restaurant') queryTag = 'amenity=restaurant';
+            else if (type === 'mosque') queryTag = 'amenity=place_of_worship';
+            else if (type === 'market_mall') queryTag = 'shop=supermarket';
+            else if (type === 'shop_special') queryTag = 'shop';
+
+            const query = `[out:json][timeout:25];(node["${queryTag.split('=')[0]}"](around:5000,${center.lat},${center.lng}););out body;`;
+            const url = `https://overpass-api.de/api/interpreter?data=` + encodeURIComponent(query);
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.elements) {
+                        data.elements.slice(0, 10).forEach(el => {
+                            if (el.lat && el.lon) {
+                                const name = el.tags.name || type;
+                                L.marker([el.lat, el.lon]).addTo(map).bindPopup(`${name} (${type})`);
+                            }
+                        });
+                        alert(`تم جلب أقرب ${type} وعرضها على الخريطة بدقة تامة.`);
+                    }
+                })
+                .catch(err => alert('خطأ في الاتصال بالخادم.'));
         }
 
-        function toggleMapTheme() {
-            isDarkMap = !isDarkMap;
-            const mapEl = document.getElementById('map');
-            if (isDarkMap) {
-                mapEl.classList.remove('day-map');
-                mapEl.classList.add('dark-map');
+        function searchPlace() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=` + encodeURIComponent(query))
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+                        map.setView([lat, lon], 16);
+                        addWaypoint(lat, lon, data[0].display_name);
+                    } else {
+                        alert('لم يتم العثور على المكان بدقة.');
+                    }
+                });
+        }
+
+        function saveOfflineTiles() {
+            if ('caches' in window) {
+                caches.open('reberai-osm-tiles-v2').then(() => {
+                    alert('تم حفظ الخريطة وبلاطاتها بنجاح للعمل بدون إنترنت!');
+                });
             } else {
-                mapEl.classList.remove('dark-map');
-                mapEl.classList.add('day-map');
+                alert('متصفحك لا يدعم تخزين الكاش.');
             }
         }
 
-        function showTopPill(msg, iconClass = 'fa-solid fa-location-dot text-blue-400', duration = 3000) {
-            const pill = document.getElementById('top-pill-notification');
-            document.getElementById('pill-msg').textContent = msg;
-            document.getElementById('pill-icon').innerHTML = `<i class="${iconClass}"></i>`;
-            pill.classList.remove('opacity-0', '-translate-y-4');
-            pill.classList.add('opacity-100', 'translate-y-0');
-
-            if (pillTimeout) clearTimeout(pillTimeout);
-            pillTimeout = setTimeout(() => {
-                pill.classList.remove('opacity-100', 'translate-y-0');
-                pill.classList.add('opacity-0', '-translate-y-4');
-            }, duration);
+        function togglePanel() {
+            const panel = document.getElementById('controlPanel');
+            panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
         }
 
-        function changeLanguage(lang) {
-            currentLang = lang;
-            const dict = i18n[lang] || i18n.en;
-            document.documentElement.lang = lang;
-            document.documentElement.dir = dict.dir;
-            document.getElementById('search-input').placeholder = dict.searchPlaceholder;
-            document.querySelector('[data-i18n="myLoc"]').textContent = dict.myLoc;
-            document.querySelector('[data-i18n="rotateTitle"]').textContent = dict.rotateTitle;
-            document.querySelector('[data-i18n="categoriesTitle"]').textContent = dict.categoriesTitle;
-            document.querySelector('[data-i18n="fuel"]').textContent = dict.fuel;
-            document.querySelector('[data-i18n="pharmacy"]').textContent = dict.pharmacy;
-            document.querySelector('[data-i18n="clinic"]').textContent = dict.clinic;
-            document.querySelector('[data-i18n="govHospital"]').textContent = dict.govHospital;
-            document.querySelector('[data-i18n="privateHospital"]').textContent = dict.privateHospital;
-            document.querySelector('[data-i18n="shopSpecial"]').textContent = dict.shopSpecial;
-            document.querySelector('[data-i18n="marketMall"]').textContent = dict.marketMall;
-            document.querySelector('[data-i18n="food"]').textContent = dict.food;
-            document.querySelector('[data-i18n="mosque"]').textContent = dict.mosque;
-            document.querySelector('[data-i18n="alert"]').textContent = dict.alert;
-            document.querySelector('[data-i18n="save"]').textContent = dict.save;
-            document.querySelector('[data-i18n="clearPins"]').textContent = dict.clearPins;
-            document.querySelector('[data-i18n="walk"]').textContent = dict.walk;
-            document.querySelector('[data-i18n="car"]').textContent = dict.car;
-            document.querySelector('[data-i18n="bike"]').textContent = dict.bike;
-            document.querySelector('[data-i18n="scenic"]').textContent = dict.scenic;
-            document.querySelector('[data-i18n="wheelchair"]').textContent = dict.wheelchair;
-            document.querySelector('[data-i18n="socialHub"]').textContent = dict.socialHub;
-            document.querySelector('[data-i18n="indoorNav"]').textContent = dict.indoorNav;
-            document.querySelector('[data-i18n="waypointsTitle"]').textContent = dict.waypointsTitle;
-            document.querySelector('[data-i18n="clearAll"]').textContent = dict.clearAll;
-            document.querySelector('[data-i18n="roadDistLabel"]').textContent = dict.roadDistLabel;
-            document.querySelector('[data-i18n="timeLabel"]').textContent = dict.timeLabel;
-            document.querySelector('[data-i18n="reportTitle"]').textContent = dict.reportTitle;
-            document.querySelector('[data-i18n="traffic"]').textContent = dict.traffic;
-            document.querySelector('[data-i18n="roadwork"]').textContent = dict.roadwork;
-            document.querySelector('[data-i18n="camera"]').textContent = dict.camera;
-            document.querySelector('[data-i18n="closed"]').textContent = dict.closed;
-            document.getElementById('start-btn-text').textContent = dict.startNav;
-            syncWaypointMarkersAndUI();
-            if (waypoints.length > 0) recalculateMultiWaypointRoute();
-        }
+        window.onload = initMap;
     </script>
 </body>
 </html>
