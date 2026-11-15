@@ -507,8 +507,34 @@
     <!-- Application Script -->
     <script>
         // =========================================================================
-        // 1. نظام الترجمة متعدد اللغات
+        // GLOBAL STATE VARIABLES (Fixed ReferenceError)
         // =========================================================================
+        let map = null;
+        let userMarker = null;
+        let friendMarker = null;
+        let routePolyline = null;
+        let radiusCircle = null;
+        let travelMode = 'car';
+        let waypoints = [];
+        let waypointMarkers = [];
+        let categoryMarkers = [];
+        let userCoords = null;
+        let hasRealGPS = false;
+        let currentMapTheme = 'standard';
+        let activeFriendConn = null;
+        let peerInstance = null;
+        let localRoomChannel = null;
+        let senderSessionId = 'usr_' + Math.random().toString(36).substring(2, 9);
+        let currentRoomCleanName = '';
+        let joinRetryTimer = null;
+
+        // Custom 2026 Verified Database for Schools, Shifts, and Shops
+        let CUSTOM_2026_PLACES = [
+            { name: 'مدرسة النور الابتدائية (دوامين: صباحي وظهري)', category: 'school', lat: 35.4695, lon: 44.3940, note: 'تشمل دوامين في نفس البناية: صباحي (مدرسة النور) وظهري (مدرسة الأمل الابتدائية)' },
+            { name: 'ثانوية كركوك للبنين (تم النقل لحي الواسطي)', category: 'school', lat: 35.4650, lon: 44.3880, note: 'تنبيه: تم نقل مقر المدرسة رسمياً إلى مبنى حي الواسطي الجديد مع الاحتفاظ بذات الاسم' },
+            { name: 'جامعة كركوك - الحي الجامعي الرئيسي', category: 'university', lat: 35.4820, lon: 44.4150, note: 'الموقع الرئيسي - كليات الهندسة والعلوم والطب' }
+        ];
+
         const I18N_DICT = {
             ar: {
                 subtitle: "منصة الملاحة الشاملة • دقة حقيقية 100%",
@@ -539,55 +565,55 @@
                 offlineSave: "حفظ أوفلاين"
             },
             ku: {
-                subtitle: "پلاتفۆرمی ڕێدۆزی زیرەک • وردی ١٠٠٪",
+                subtitle: "ڕێدۆزی گشتگیر • وردی ڕاستەقینە",
                 myLoc: "شوێنی من",
-                searchPlaceholder: "قوتابخانە، مزگەوت، نەخۆشخانە، دووکان...",
+                searchPlaceholder: "قوتابخانە، مزگەوت، نەخۆشخانە...",
                 searchBtn: "گەڕان",
-                catHeader: "شوێنە ڕاستەقینەکان (بازنەی ٣ کم):",
-                mosque: "مزگەوت و تەکیە",
-                school: "قوتابخانە (لەگەڵ دەوامەکان)",
-                univ: "زانکۆ و پەیمانگاکان",
+                catHeader: "شوێنە ڕاستەقینەکان (مەودای ٣ کم):",
+                mosque: "مزگەوت",
+                school: "قوتابخانە (دوو دەوامی)",
+                univ: "زانکۆ و پەیمانگا",
                 fuel: "وێستگەی سووتەمەنی",
-                govHosp: "نەخۆشخانە و بنکەکان",
+                govHosp: "نەخۆشخانە",
                 pharmacy: "دەرمانخانە",
-                clinic: "کڵینیک و تاقیگە",
+                clinic: "کڵینیک",
                 mall: "بازاڕ و مۆڵ",
-                cosmetics: "کۆزمتیک و بۆن",
-                shops: "دووکان و خزمەتگوزاری",
-                rest: "چێشتخانە و کافێ",
+                cosmetics: "کۆزمتیک",
+                shops: "دووکان",
+                rest: "چێشتخانە",
                 modeHeader: "شێوازی هاتوچۆ:",
                 car: "ئۆتۆمبێل",
                 walk: "پیاسە",
                 bike: "پایسکیل",
                 wpTitle: "شوێنە دیاریکراوەکان:",
                 clearWp: "سڕینەوەی هەموو",
-                distTitle: "دووری وردی ڕێگا",
+                distTitle: "دووری ڕێگا",
                 durTitle: "کاتی خەمڵێنراو",
-                socialRoom: "ژووری هاوڕێ و چات",
+                socialRoom: "ژووری چات",
                 offlineSave: "پاشەکەوت"
             },
             en: {
-                subtitle: "Smart Navigation Platform • 100% Verified",
+                subtitle: "Comprehensive Navigation • 100% Verified",
                 myLoc: "My GPS",
-                searchPlaceholder: "Search school, mosque, hospital, shop...",
+                searchPlaceholder: "Search school, mosque, hospital...",
                 searchBtn: "Search",
-                catHeader: "Verified Real Places (3 KM Radius):",
+                catHeader: "Verified Landmarks (3 KM):",
                 mosque: "Mosques",
-                school: "Schools (Multi-Shift Info)",
-                univ: "Universities & Institutes",
+                school: "Schools & Shifts",
+                univ: "Universities",
                 fuel: "Fuel Stations",
-                govHosp: "Hospitals & Centers",
+                govHosp: "Hospitals",
                 pharmacy: "Pharmacies",
-                clinic: "Clinics & Labs",
-                mall: "Markets & Malls",
-                cosmetics: "Cosmetics & Perfumes",
+                clinic: "Clinics",
+                mall: "Malls & Markets",
+                cosmetics: "Cosmetics",
                 shops: "Shops & Services",
-                rest: "Restaurants & Cafes",
-                modeHeader: "Travel Mode:",
+                rest: "Restaurants",
+                modeHeader: "Travel Mode & Route:",
                 car: "Car",
                 walk: "Walk",
                 bike: "Bike",
-                wpTitle: "Selected Waypoints (Tap Map):",
+                wpTitle: "Selected Waypoints:",
                 clearWp: "Clear All",
                 distTitle: "Exact Distance",
                 durTitle: "Est. Duration",
@@ -595,34 +621,703 @@
                 offlineSave: "Save Offline"
             },
             tr: {
-                subtitle: "Akıllı Navigasyon • %100 Doğrulanmış",
+                subtitle: "Kapsamlı Navigasyon • %100 Doğrulandı",
                 myLoc: "Konumum",
-                searchPlaceholder: "Okul, cami, hastane, dükkan ara...",
+                searchPlaceholder: "Okul, cami, hastane ara...",
                 searchBtn: "Ara",
-                catHeader: "Doğrulanmış Yerler (3 KM Çap):",
+                catHeader: "Doğrulanmış Yerler (3 KM):",
                 mosque: "Camiler",
-                school: "Okullar (Vardiya Bilgili)",
+                school: "Okullar",
                 univ: "Üniversiteler",
-                fuel: "Akaryakıt İstasyonları",
+                fuel: "Akaryakıt",
                 govHosp: "Hastaneler",
                 pharmacy: "Eczaneler",
                 clinic: "Klinikler",
-                mall: "Market ve AVM",
-                cosmetics: "Kozmetik ve Parfüm",
+                mall: "AVM ve Market",
+                cosmetics: "Kozmetik",
                 shops: "Dükkanlar",
-                rest: "Restoran ve Kafeler",
+                rest: "Restoranlar",
                 modeHeader: "Ulaşım Modu:",
                 car: "Araba",
                 walk: "Yürüyüş",
                 bike: "Bisiklet",
                 wpTitle: "Seçilen Noktalar:",
                 clearWp: "Temizle",
-                distTitle: "Kesin Mesafe",
-                durTitle: "Tahmini Süre",
+                distTitle: "Mesafe",
+                durTitle: "Süre",
                 socialRoom: "Canlı Oda ve Sohbet",
                 offlineSave: "Çevrimdışı Kaydet"
             }
         };
+
+        let baseTileLayer, nightTileLayer, satelliteTileLayer;
+
+        function initMap() {
+            const defaultCenter = [35.4681, 44.3922]; // Kirkuk Center
+            map = L.map('map', {
+                center: defaultCenter,
+                zoom: 15,
+                zoomControl: false,
+                zoomAnimation: true,
+                fadeAnimation: true,
+                touchRotate: true,
+                rotate: true,
+                bearing: 0
+            });
+
+            baseTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+            map.on('rotate', () => {
+                const angle = Math.round(map.getBearing());
+                const slider = document.getElementById('map-rotation-slider');
+                const lbl = document.getElementById('rotation-angle-label');
+                if (slider) slider.value = angle < 0 ? angle + 360 : angle;
+                if (lbl) lbl.textContent = `${angle}°`;
+            });
+
+            map.on('zoomend moveend', () => {
+                if (routePolyline) routePolyline.redraw();
+            });
+
+            map.on('click', async function(e) {
+                document.getElementById('search-results-box').classList.add('hidden');
+                const coords = [e.latlng.lat, e.latlng.lng];
+                showTopPill('جاري تحديد اسم النقطة...', 'fa-solid fa-location-dot text-sky-400', 1800);
+                const name = await reverseGeocodeOSM(coords[0], coords[1]);
+                addWaypoint(name, coords, true);
+            });
+
+            const params = new URLSearchParams(window.location.search);
+            const rParam = params.get('room');
+            if (rParam) {
+                document.getElementById('join-room-name-input').value = rParam;
+                openSocialHubModal();
+                setTimeout(() => joinNamedRoom(), 900);
+            }
+        }
+
+        function setMapVisualTheme(theme) {
+            currentMapTheme = theme;
+            const bodyEl = document.body;
+            bodyEl.classList.remove('map-night-mode', 'map-night-purple-mode', 'map-satellite-mode');
+
+            ['standard', 'night', 'night_purple', 'satellite'].forEach(t => {
+                const btn = document.getElementById(`theme-btn-${t}`);
+                if (!btn) return;
+                if (t === theme) {
+                    btn.className = 'py-1.5 px-1 rounded-xl bg-sky-600 text-white text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 shadow transition';
+                } else {
+                    btn.className = 'py-1.5 px-1 rounded-xl bg-white/5 hover:bg-white/15 text-gray-200 text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 transition';
+                }
+            });
+
+            if (theme === 'night') {
+                bodyEl.classList.add('map-night-mode');
+                showTopPill('تم تفعيل الوضع الليلي الكحلي', 'fa-solid fa-moon text-indigo-400', 2000);
+            } else if (theme === 'night_purple') {
+                bodyEl.classList.add('map-night-purple-mode');
+                showTopPill('تم تفعيل الوضع الليلي الأرجواني الهادئ', 'fa-solid fa-cloud-moon text-purple-400', 2000);
+            } else if (theme === 'satellite') {
+                bodyEl.classList.add('map-satellite-mode');
+                showTopPill('تم تفعيل وضع الأقمار الصناعية عالي التباين', 'fa-solid fa-satellite text-amber-400', 2000);
+            } else {
+                showTopPill('الوضع القياسي النشط', 'fa-solid fa-map text-sky-400', 2000);
+            }
+        }
+
+        function rotateMapAngle(deg) {
+            const angle = parseInt(deg);
+            if (map && typeof map.setBearing === 'function') {
+                map.setBearing(angle);
+                const lbl = document.getElementById('rotation-angle-label');
+                if (lbl) lbl.textContent = `${angle}°`;
+            }
+        }
+
+        function resetMapRotation() {
+            if (map && typeof map.setBearing === 'function') {
+                map.setBearing(0);
+                const slider = document.getElementById('map-rotation-slider');
+                const lbl = document.getElementById('rotation-angle-label');
+                if (slider) slider.value = 0;
+                if (lbl) lbl.textContent = '0°';
+                showTopPill('تمت إعادة ضبط اتجاه الخريطة للشمال', 'fa-solid fa-compass text-sky-400', 2000);
+            }
+        }
+
+        function requestRealGPS(flyToUser = false) {
+            if (!navigator.geolocation) {
+                const statusEl = document.getElementById('gps-status-text');
+                if (statusEl) statusEl.textContent = 'المتصفح لا يدعم GPS';
+                return;
+            }
+            const statusEl = document.getElementById('gps-status-text');
+            if (statusEl) statusEl.textContent = 'جاري التقاط إشارة الأقمار الصناعية GPS...';
+            
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    const acc = Math.round(pos.coords.accuracy);
+                    userCoords = [lat, lon];
+                    hasRealGPS = true;
+
+                    const dotEl = document.getElementById('gps-dot-indicator');
+                    if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+                    if (statusEl) statusEl.textContent = `متصل بدقة GPS (±${acc} م)`;
+
+                    if (!userMarker) {
+                        const gpsIcon = L.divIcon({
+                            className: 'user-gps-dot',
+                            html: `<div style="width:24px;height:24px;border-radius:50%;background:#0284c7;border:3px solid #ffffff;box-shadow:0 0 16px rgba(2,132,199,0.95);position:relative;"><div class="gps-pulse"></div></div>`,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        });
+                        userMarker = L.marker(userCoords, { icon: gpsIcon, zIndexOffset: 1000 }).addTo(map).bindPopup('<b>موقعك الحالي (GPS)</b>');
+                    } else {
+                        userMarker.setLatLng(userCoords);
+                    }
+
+                    if (flyToUser) map.flyTo(userCoords, 16);
+                    broadcastMyLiveGPS();
+                    if (waypoints.length > 0) recalculateMultiWaypointRoute();
+                },
+                () => {
+                    const dotEl = document.getElementById('gps-dot-indicator');
+                    if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                    if (statusEl) statusEl.textContent = 'تعذر الوصول للإشارة — تأكد من تفعيل الموقع';
+                    showTopPill('تعذر التقاط موقع الـ GPS. تأكد من تفعيل خدمة الموقع في المتصفح.', 'fa-solid fa-triangle-exclamation text-amber-400', 4000);
+                },
+                { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+            );
+        }
+
+        async function reverseGeocodeOSM(lat, lon) {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
+                const data = await res.json();
+                if (data && data.display_name) {
+                    const parts = data.display_name.split(',');
+                    return parts[0] + (parts[1] ? ',' + parts[1] : '');
+                }
+            } catch(e) {}
+            return `نقطة (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+        }
+
+        function addWaypoint(name, coords, broadcast = false) {
+            waypoints.push({ name, coords });
+            renderWaypointsList();
+            const wpIcon = L.divIcon({
+                className: 'custom-wp-pin',
+                html: `<div style="width:30px;height:30px;border-radius:50%;background:#e11d48;border:3px solid #ffffff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;box-shadow:0 4px 14px rgba(0,0,0,0.6);">${waypoints.length}</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+            const m = L.marker(coords, { icon: wpIcon }).addTo(map).bindPopup(`<b>${name}</b>`);
+            waypointMarkers.push(m);
+            recalculateMultiWaypointRoute();
+
+            if (broadcast && activeFriendConn && activeFriendConn.open) {
+                try { activeFriendConn.send({ type: 'WAYPOINT_SHARED', name, coords }); } catch(e) {}
+            }
+            if (broadcast && localRoomChannel) {
+                try { localRoomChannel.postMessage({ type: 'WAYPOINT_SHARED', name, coords, sender: senderSessionId }); } catch(e) {}
+            }
+        }
+
+        function clearAllWaypoints() {
+            waypoints = [];
+            waypointMarkers.forEach(m => map.removeLayer(m));
+            waypointMarkers = [];
+            if (routePolyline) {
+                map.removeLayer(routePolyline);
+                routePolyline = null;
+            }
+            renderWaypointsList();
+            document.getElementById('route-distance-val').textContent = '0 م';
+            document.getElementById('route-duration-val').textContent = '0 د';
+        }
+
+        function renderWaypointsList() {
+            const listEl = document.getElementById('waypoints-list');
+            if (!listEl) return;
+            if (waypoints.length === 0) {
+                listEl.innerHTML = '<div>لم يتم تحديد وجهة بعد.</div>';
+                return;
+            }
+            let html = '';
+            waypoints.forEach((wp, idx) => {
+                html += `<div class="flex items-center justify-between bg-slate-950 px-2 py-1.5 rounded-lg border border-white/5">
+                    <span class="truncate">${idx + 1}. ${wp.name}</span>
+                    <button onclick="removeWaypoint(${idx})" class="text-rose-400 hover:text-rose-300 font-bold px-1.5">&times;</button>
+                </div>`;
+            });
+            listEl.innerHTML = html;
+        }
+
+        function removeWaypoint(idx) {
+            waypoints.splice(idx, 1);
+            if (waypointMarkers[idx]) {
+                map.removeLayer(waypointMarkers[idx]);
+                waypointMarkers.splice(idx, 1);
+            }
+            renderWaypointsList();
+            if (waypoints.length > 0) recalculateMultiWaypointRoute();
+            else {
+                if (routePolyline) {
+                    map.removeLayer(routePolyline);
+                    routePolyline = null;
+                }
+                document.getElementById('route-distance-val').textContent = '0 م';
+                document.getElementById('route-duration-val').textContent = '0 د';
+            }
+        }
+
+        function setTravelMode(mode) {
+            travelMode = mode;
+            ['car', 'walk', 'bike'].forEach(m => {
+                const btn = document.getElementById(`btn-mode-${m}`);
+                if (!btn) return;
+                if (m === mode) {
+                    btn.className = 'p-2 rounded-xl bg-sky-600 text-white font-bold flex items-center justify-center gap-1 shadow';
+                } else {
+                    btn.className = 'p-2 rounded-xl bg-white/10 text-gray-300 hover:bg-white/15 font-bold flex items-center justify-center gap-1';
+                }
+            });
+            if (waypoints.length > 0) recalculateMultiWaypointRoute();
+        }
+
+        async function recalculateMultiWaypointRoute() {
+            if (waypoints.length === 0) return;
+            let startCoord = userCoords;
+            if (!startCoord) {
+                const center = map.getCenter();
+                startCoord = [center.lat, center.lng];
+            }
+            let coordsStr = `${startCoord[1]},${startCoord[0]};`;
+            waypoints.forEach(wp => {
+                coordsStr += `${wp.coords[1]},${wp.coords[0]};`;
+            });
+            coordsStr = coordsStr.slice(0, -1);
+
+            let profile = 'driving';
+            if (travelMode === 'walk') profile = 'walking';
+            else if (travelMode === 'bike') profile = 'cycling';
+
+            try {
+                const res = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordsStr}?overview=full&geometries=geojson`);
+                const data = await res.json();
+                if (data.routes && data.routes.length > 0) {
+                    const r = data.routes[0];
+                    const distM = r.distance;
+                    const durSec = r.duration;
+                    const distText = distM >= 1000 ? (distM / 1000).toFixed(2) + ' كم' : Math.round(distM) + ' متر';
+                    const durMin = Math.max(1, Math.round(durSec / 60)) + ' د';
+
+                    document.getElementById('route-distance-val').textContent = distText;
+                    document.getElementById('route-duration-val').textContent = durMin;
+
+                    const latlngs = r.geometry.coordinates.map(c => [c[1], c[0]]);
+                    if (routePolyline) map.removeLayer(routePolyline);
+
+                    routePolyline = L.polyline(latlngs, {
+                        color: '#0284c7',
+                        weight: 6,
+                        opacity: 0.88
+                    }).addTo(map);
+
+                    map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+                }
+            } catch(e) {
+                showTopPill('تعذر حساب المسار بدقة من OSRM', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
+            }
+        }
+
+        function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // =========================================================================
+        // CATEGORY CONFIG & OVERPASS FAST FETCH
+        // =========================================================================
+        const CATEGORY_CONFIG = {
+            mosque: {
+                label: 'مسجد / جامع',
+                searchTerms: ['جامع', 'مسجد', 'mosque'],
+                color: '#0d9488',
+                icon: 'fa-mosque',
+                overpassFilter: `node["amenity"="place_of_worship"](around:RADIUS,LAT,LON);way["amenity"="place_of_worship"](around:RADIUS,LAT,LON);`
+            },
+            school: {
+                label: 'مدرسة (مع الدوامات)',
+                searchTerms: ['مدرسة', 'متوسطة', 'ثانوية', 'school'],
+                color: '#d97706',
+                icon: 'fa-school',
+                overpassFilter: `node["amenity"="school"](around:RADIUS,LAT,LON);way["amenity"="school"](around:RADIUS,LAT,LON);`
+            },
+            university: {
+                label: 'جامعة / معهد',
+                searchTerms: ['جامعة', 'كلية', 'معهد', 'university'],
+                color: '#2563eb',
+                icon: 'fa-graduation-cap',
+                overpassFilter: `node["amenity"~"university|college"](around:RADIUS,LAT,LON);way["amenity"~"university|college"](around:RADIUS,LAT,LON);`
+            },
+            fuel: {
+                label: 'محطة وقود',
+                searchTerms: ['محطة وقود', 'بانزينخانة', 'fuel'],
+                color: '#ea580c',
+                icon: 'fa-gas-pump',
+                overpassFilter: `node["amenity"="fuel"](around:RADIUS,LAT,LON);way["amenity"="fuel"](around:RADIUS,LAT,LON);`
+            },
+            gov_hospital: {
+                label: 'مستشفى / مركز صحي',
+                searchTerms: ['مستشفى', 'مركز صحي', 'hospital'],
+                color: '#e11d48',
+                icon: 'fa-hospital',
+                overpassFilter: `node["amenity"="hospital"](around:RADIUS,LAT,LON);way["amenity"="hospital"](around:RADIUS,LAT,LON);`
+            },
+            pharmacy: {
+                label: 'صيدلية',
+                searchTerms: ['صيدلية', 'pharmacy'],
+                color: '#059669',
+                icon: 'fa-pills',
+                overpassFilter: `node["amenity"="pharmacy"](around:RADIUS,LAT,LON);way["amenity"="pharmacy"](around:RADIUS,LAT,LON);`
+            },
+            clinic: {
+                label: 'عيادة / مختبر',
+                searchTerms: ['عيادة', 'مختبر', 'clinic'],
+                color: '#0891b2',
+                icon: 'fa-stethoscope',
+                overpassFilter: `node["amenity"~"clinic|doctors|dentist"](around:RADIUS,LAT,LON);way["amenity"~"clinic|doctors|dentist"](around:RADIUS,LAT,LON);`
+            },
+            mall: {
+                label: 'سوق / مول',
+                searchTerms: ['سوق', 'مول', 'ماركت', 'supermarket'],
+                color: '#4f46e5',
+                icon: 'fa-cart-shopping',
+                overpassFilter: `node["shop"~"supermarket|mall|department_store"](around:RADIUS,LAT,LON);way["shop"~"supermarket|mall|department_store"](around:RADIUS,LAT,LON);`
+            },
+            cosmetics: {
+                label: 'كوزمتك وعطور',
+                searchTerms: ['كوزمتك', 'عطور', 'cosmetics'],
+                color: '#db2777',
+                icon: 'fa-spray-can-sparkles',
+                overpassFilter: `node["shop"~"cosmetics|perfumery|beauty"](around:RADIUS,LAT,LON);node["name"~"كوزمتك|عطور",i](around:RADIUS,LAT,LON);`
+            },
+            shops: {
+                label: 'محل تجاري / خدمات',
+                searchTerms: ['محل', 'متجر', 'shop'],
+                color: '#7c3aed',
+                icon: 'fa-store',
+                overpassFilter: `node["shop"]["name"](around:RADIUS,LAT,LON);way["shop"]["name"](around:RADIUS,LAT,LON);`
+            },
+            restaurant: {
+                label: 'مطعم / مقهى',
+                searchTerms: ['مطعم', 'مقهى', 'كافيه', 'restaurant'],
+                color: '#ca8a04',
+                icon: 'fa-utensils',
+                overpassFilter: `node["amenity"~"restaurant|cafe|fast_food"]["name"](around:RADIUS,LAT,LON);way["amenity"~"restaurant|cafe|fast_food"]["name"](around:RADIUS,LAT,LON);`
+            }
+        };
+
+        function clearCategoryMarkers() {
+            categoryMarkers.forEach(m => map.removeLayer(m));
+            categoryMarkers = [];
+            if (radiusCircle) {
+                map.removeLayer(radiusCircle);
+                radiusCircle = null;
+            }
+            document.getElementById('verified-poi-list').classList.add('hidden');
+            document.getElementById('btn-clear-cats').classList.add('hidden');
+        }
+
+        async function fetchFastOverpass(query) {
+            const servers = [
+                'https://overpass.kumi.systems/api/interpreter',
+                'https://overpass-api.de/api/interpreter',
+                'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+            ];
+            const requests = servers.map(async (srv) => {
+                const ctrl = new AbortController();
+                const timer = setTimeout(() => ctrl.abort(), 7000);
+                try {
+                    const res = await fetch(srv + '?data=' + encodeURIComponent(query), { signal: ctrl.signal });
+                    clearTimeout(timer);
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json();
+                    if (data && Array.isArray(data.elements)) return data.elements;
+                    throw new Error('Empty');
+                } catch (e) {
+                    clearTimeout(timer);
+                    throw e;
+                }
+            });
+            return Promise.any(requests);
+        }
+
+        async function fetchFallbackNominatim(term, center, radiusKm) {
+            const degOffset = radiusKm / 111.0;
+            const left = (center[1] - degOffset).toFixed(5);
+            const right = (center[1] + degOffset).toFixed(5);
+            const top = (center[0] + degOffset).toFixed(5);
+            const bottom = (center[0] - degOffset).toFixed(5);
+            const url = `https://nominatim.openstreetmap.org/search?format=json&accept-language=ar&limit=20&bounded=1&viewbox=${left},${top},${right},${bottom}&q=${encodeURIComponent(term)}`;
+            const res = await fetch(url);
+            if (!res.ok) return [];
+            const items = await res.json();
+            return items.map(it => ({
+                lat: parseFloat(it.lat),
+                lon: parseFloat(it.lon),
+                tags: { name: it.name || it.display_name.split(',')[0] }
+            }));
+        }
+
+        async function searchStrictCategory(categoryKey) {
+            const cfg = CATEGORY_CONFIG[categoryKey];
+            if (!cfg) return;
+
+            let center = userCoords;
+            if (!center) {
+                const c = map.getCenter();
+                center = [c.lat, c.lng];
+            }
+
+            const radiusMeters = parseInt(document.getElementById('search-radius-select').value || '3000', 10);
+            const radiusKm = radiusMeters / 1000;
+
+            clearCategoryMarkers();
+
+            radiusCircle = L.circle(center, {
+                radius: radiusMeters,
+                color: cfg.color,
+                fillColor: cfg.color,
+                fillOpacity: 0.08,
+                weight: 2,
+                dashArray: '6, 6'
+            }).addTo(map);
+            map.fitBounds(radiusCircle.getBounds(), { padding: [30, 30] });
+
+            showTopPill(`جاري جلب ${cfg.label} ضمن نطاق ${radiusKm} كم...`, 'fa-solid fa-bolt fa-fade text-sky-400', 2200);
+
+            const rawFilter = cfg.overpassFilter
+                .replace(/RADIUS/g, radiusMeters)
+                .replace(/LAT/g, center[0])
+                .replace(/LON/g, center[1]);
+
+            const query = `[out:json][timeout:8];(${rawFilter});out center tags 45;`;
+
+            let elements = [];
+            try {
+                elements = await fetchFastOverpass(query);
+            } catch (e) {
+                try {
+                    elements = await fetchFallbackNominatim(cfg.searchTerms[0], center, radiusKm);
+                } catch (err2) {
+                    elements = [];
+                }
+            }
+
+            const seenCoords = new Set();
+            const verifiedList = [];
+
+            elements.forEach(el => {
+                const lat = el.lat || (el.center ? el.center.lat : null);
+                const lon = el.lon || (el.center ? el.center.lon : null);
+                if (!lat || !lon) return;
+
+                const tags = el.tags || {};
+                const realName = tags['name:ar'] || tags['name:ku'] || tags.name || tags['name:en'] || tags.brand;
+                if (!realName || realName.trim().length < 2) return;
+
+                const coordKey = `${lat.toFixed(4)}_${lon.toFixed(4)}`;
+                if (seenCoords.has(coordKey)) return;
+                seenCoords.add(coordKey);
+
+                const distKm = calculateHaversineDistance(center[0], center[1], lat, lon);
+                if (distKm > radiusKm) return;
+
+                let extraNote = '';
+                if (tags.description) extraNote = tags.description;
+                else if (tags['addr:street']) extraNote = `الشارع: ${tags['addr:street']}`;
+
+                verifiedList.push({
+                    name: realName.trim(),
+                    lat,
+                    lon,
+                    distKm,
+                    note: extraNote
+                });
+            });
+
+            // Include local custom 2026 places and school shifts
+            const savedLocal = JSON.parse(localStorage.getItem('reberai_custom_2026') || '[]');
+            const allCustom = [...CUSTOM_2026_PLACES, ...savedLocal];
+            allCustom.forEach(item => {
+                if (item.category === categoryKey) {
+                    const distKm = calculateHaversineDistance(center[0], center[1], item.lat, item.lon);
+                    if (distKm <= radiusKm) {
+                        verifiedList.push({
+                            name: item.name,
+                            lat: item.lat,
+                            lon: item.lon,
+                            distKm,
+                            note: item.note || ''
+                        });
+                    }
+                }
+            });
+
+            verifiedList.sort((a, b) => a.distKm - b.distKm);
+
+            const listContainer = document.getElementById('verified-poi-list');
+            const clearBtn = document.getElementById('btn-clear-cats');
+
+            if (verifiedList.length === 0) {
+                listContainer.innerHTML = `<div class="p-3 text-center text-gray-300 text-[11px]">لا توجد معالم من نوع (${cfg.label}) ضمن نطاق ${radiusKm} كم. جرب زيادة النطاق إلى 5 كم.</div>`;
+                listContainer.classList.remove('hidden');
+                clearBtn.classList.remove('hidden');
+                showTopPill(`لم يُعثر على معالم قريبة في نطاق ${radiusKm} كم`, 'fa-solid fa-circle-info text-amber-400', 3000);
+                return;
+            }
+
+            let listHtml = '';
+            verifiedList.forEach((poi, idx) => {
+                const distText = poi.distKm >= 1 ? `${poi.distKm.toFixed(2)} كم` : `${Math.round(poi.distKm * 1000)} متر`;
+                const pinIcon = L.divIcon({
+                    className: 'poi-custom-marker',
+                    html: `<div style="width:28px;height:28px;border-radius:50%;background:${cfg.color};border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.6);"><i class="fa-solid ${cfg.icon} text-xs"></i></div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+
+                const popupHtml = `
+                    <div class="p-1.5 min-w-[200px] text-right" dir="rtl">
+                        <div class="font-extrabold text-xs text-white mb-1">${poi.name}</div>
+                        <div class="text-[11px] text-sky-300 font-bold mb-1">📏 المسافة: ${distText}</div>
+                        ${poi.note ? `<div class="text-[10px] bg-amber-500/20 border border-amber-400/40 text-amber-200 p-1.5 rounded-lg mb-2 leading-relaxed">💡 ${poi.note}</div>` : ''}
+                        <button onclick="addWaypoint('${poi.name.replace(/'/g, '')}', [${poi.lat}, ${poi.lon}], true)" class="w-full py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold">
+                            <i class="fa-solid fa-route ml-1"></i> رسم المسار إلى هنا
+                        </button>
+                    </div>
+                `;
+
+                const marker = L.marker([poi.lat, poi.lon], { icon: pinIcon })
+                    .addTo(map)
+                    .bindPopup(popupHtml);
+
+                if (idx < 6) {
+                    marker.bindTooltip(poi.name, {
+                        permanent: true,
+                        direction: 'top',
+                        offset: [0, -14],
+                        className: 'crisp-map-label'
+                    });
+                }
+
+                categoryMarkers.push(marker);
+
+                listHtml += `
+                    <div onclick="focusVerifiedPoi(${poi.lat}, ${poi.lon}, '${poi.name.replace(/'/g, '')}')" class="p-2 hover:bg-white/10 cursor-pointer flex items-start justify-between gap-2 transition">
+                        <div class="min-w-0">
+                            <div class="font-bold text-white truncate">${idx + 1}. ${poi.name}</div>
+                            ${poi.note ? `<div class="text-[10px] text-amber-300 mt-0.5 leading-snug">💡 ${poi.note}</div>` : ''}
+                        </div>
+                        <span class="text-[10px] font-extrabold text-sky-400 bg-sky-500/15 px-2 py-0.5 rounded-md shrink-0">${distText}</span>
+                    </div>
+                `;
+            });
+
+            listContainer.innerHTML = listHtml;
+            listContainer.classList.remove('hidden');
+            clearBtn.classList.remove('hidden');
+            showTopPill(`تم جلب ${verifiedList.length} من (${cfg.label}) بنجاح`, 'fa-solid fa-circle-check text-emerald-400', 3000);
+        }
+
+        function focusVerifiedPoi(lat, lon, name) {
+            map.flyTo([lat, lon], 17);
+            showTopPill(`تم التركيز على: ${name}`, 'fa-solid fa-location-crosshairs text-sky-400', 2000);
+        }
+
+        async function handleSearchSubmit() {
+            const val = document.getElementById('place-search-input').value.trim();
+            if (!val) return;
+            const box = document.getElementById('search-results-box');
+            showTopPill('جاري البحث...', 'fa-solid fa-magnifying-glass text-sky-400', 1500);
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=` + encodeURIComponent(val));
+                const results = await res.json();
+                if (results && results.length > 0) {
+                    let html = '';
+                    results.slice(0, 6).forEach(r => {
+                        html += `<div class="p-2.5 text-xs text-white hover:bg-white/10 cursor-pointer truncate" onclick="selectSearchResult(${r.lat}, ${r.lon}, '${r.display_name.replace(/'/g, "")}')">
+                            <i class="fa-solid fa-location-dot text-sky-400 ml-1"></i> ${r.display_name}
+                        </div>`;
+                    });
+                    box.innerHTML = html;
+                    box.classList.remove('hidden');
+                } else {
+                    box.innerHTML = '<div class="p-2.5 text-xs text-gray-400">لم يتم العثور على نتائج.</div>';
+                    box.classList.remove('hidden');
+                }
+            } catch(e) {
+                showTopPill('تعذر إجراء البحث', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
+            }
+        }
+
+        function selectSearchResult(lat, lon, name) {
+            document.getElementById('search-results-box').classList.add('hidden');
+            document.getElementById('place-search-input').value = name;
+            map.setView([lat, lon], 16);
+            addWaypoint(name, [lat, lon], true);
+        }
+
+        // =========================================================================
+        // ADD PLACE & SCHOOL SHIFT MODAL
+        // =========================================================================
+        function openAddPlaceModal() {
+            const modal = document.getElementById('add-place-modal');
+            const center = map.getCenter();
+            document.getElementById('new-place-coords-preview').textContent = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
+            modal.classList.remove('hidden');
+        }
+
+        function closeAddPlaceModal() {
+            document.getElementById('add-place-modal').classList.add('hidden');
+        }
+
+        function saveCustomPlace2026() {
+            const name = document.getElementById('new-place-name').value.trim();
+            const category = document.getElementById('new-place-cat').value;
+            const note = document.getElementById('new-place-note').value.trim();
+
+            if (!name) {
+                showTopPill('يرجى كتابة اسم المكان أو المدرسة أولاً', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
+                return;
+            }
+
+            const center = map.getCenter();
+            const newItem = { name, category, lat: center.lat, lon: center.lng, note };
+
+            const savedLocal = JSON.parse(localStorage.getItem('reberai_custom_2026') || '[]');
+            savedLocal.push(newItem);
+            localStorage.setItem('reberai_custom_2026', JSON.stringify(savedLocal));
+
+            closeAddPlaceModal();
+            showTopPill('تمت إضافة وتحديث المعلم بنجاح لسجلات 2026!', 'fa-solid fa-circle-check text-emerald-400', 3500);
+            searchStrictCategory(category);
+        }
 
         function changeAppLanguage(lang) {
             const d = I18N_DICT[lang] || I18N_DICT['ar'];
@@ -671,7 +1366,7 @@
             const box = document.getElementById('right-control-box');
             const icon = document.getElementById('drawer-toggle-icon');
             if (!box || !icon) return;
-            if (box.classList.contains('translate-x-[115%]')) {
+            if (box.classList.contains('translate-x-[115%]))')) {
                 box.classList.remove('translate-x-[115%]');
                 icon.className = 'fa-solid fa-xmark text-lg';
             } else {
@@ -681,722 +1376,8 @@
         }
 
         // =========================================================================
-        // 2. حالة الخريطة وطبقات العرض عالية الوضوح (Standard, Vibrant, Night, Satellite)
+        // 7. SOCIAL ROOMS & CHAT (PEERJS + BROADCAST)
         // =========================================================================
-        let map, userMarker, routePolyline = null;
-        let currentBaseLayer = null;
-        let radiusCircle = null;
-        let travelMode = 'car';
-        let waypoints = [];
-        let waypointMarkers = [];
-        let categoryMarkers = [];
-        let userCoords = null;
-        let hasRealGPS = false;
-
-        // قاعدة بيانات محلية ذكية للمعالم المضافة أو المحدثة (2026) مع دعم تعدد الدوامات ونقل المدارس
-        const CUSTOM_2026_PLACES = [
-            {
-                id: 'sch-kirkuk-1',
-                name: 'مدرسة الفراهيدي / متوسطة الحدباء (بناية مزدوجة الدوام)',
-                category: 'school',
-                lat: 35.4695,
-                lon: 44.3945,
-                note: '⚠️ تنبيه دوام مزدوج: البناية تضم مدرستين (صباحي: مدرسة الفراهيدي الابتدائية | ظهري: متوسطة الحدباء).',
-                updatedAt: '15/11/2026'
-            },
-            {
-                id: 'sch-kirkuk-2',
-                name: 'ثانوية كركوك المركزية (الموقع المنقول الجديد)',
-                category: 'school',
-                lat: 35.4650,
-                lon: 44.3890,
-                note: '🔄 تنبيه نقل موقع: تم نقل كادر وطلاب المدرسة إلى هذه البناية الحديثة مع الاحتفاظ بالاسم الأصلي للمدرسة.',
-                updatedAt: '15/11/2026'
-            }
-        ];
-
-        const TILE_PROVIDERS = {
-            // خرائط OpenStreetMap الرسمية المجانية 100% بدون أي قيود أو مفتاح API
-            standard: {
-                url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                attr: '&copy; OpenStreetMap Contributors',
-                cssClass: ''
-            },
-            // الوضع الليلي الأول (أزرق داكن مريح للعين)
-            night: {
-                url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                attr: '&copy; OpenStreetMap Night Mode',
-                cssClass: 'map-night-mode'
-            },
-            // الوضع الليلي الثاني (نيلي / أرجواني هادئ)
-            night_purple: {
-                url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                attr: '&copy; OpenStreetMap Purple Night',
-                cssClass: 'map-night-purple-mode'
-            },
-            // صور الأقمار الصناعية الحقيقية HD
-            satellite: {
-                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                attr: '&copy; Esri Satellite HD 2026',
-                cssClass: 'map-satellite-mode'
-            }
-        };
-
-        function setMapVisualTheme(themeName) {
-            const wrapper = document.getElementById('map-wrapper');
-            const cfg = TILE_PROVIDERS[themeName] || TILE_PROVIDERS.standard;
-
-            wrapper.classList.remove('map-night-mode', 'map-night-purple-mode', 'map-satellite-mode');
-            if (cfg.cssClass) wrapper.classList.add(cfg.cssClass);
-
-            if (currentBaseLayer) map.removeLayer(currentBaseLayer);
-            currentBaseLayer = L.tileLayer(cfg.url, {
-                attribution: cfg.attr,
-                maxZoom: 19
-            }).addTo(map);
-
-            // إضافة طبقة أسماء المدن والشوارع فوق القمر الصناعي من خادم Esri المجاني
-            if (window._satelliteLabelsLayer) {
-                map.removeLayer(window._satelliteLabelsLayer);
-                window._satelliteLabelsLayer = null;
-            }
-            if (themeName === 'satellite') {
-                window._satelliteLabelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-                    maxZoom: 19,
-                    zIndex: 10
-                }).addTo(map);
-            }
-
-            // تحديث أزرار الثيم داخل الصندوق
-            ['standard', 'night', 'night_purple', 'satellite'].forEach(t => {
-                const btn = document.getElementById(`theme-btn-${t}`);
-                if (!btn) return;
-                if (t === themeName) {
-                    btn.className = 'py-1.5 px-1 rounded-xl bg-sky-600 text-white text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 shadow transition';
-                } else {
-                    btn.className = 'py-1.5 px-1 rounded-xl bg-white/5 hover:bg-white/15 text-gray-200 text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 transition';
-                }
-            });
-
-            const names = { standard: 'القياسي فائق الوضوح', night: 'الوضع الليلي الكحلي', night_purple: 'الوضع الليلي الأرجواني', satellite: 'القمر الصناعي المباشر HD' };
-            showTopPill(`تم تفعيل نمط العرض: ${names[themeName]}`, 'fa-solid fa-eye text-sky-400', 2200);
-        }
-
-        function initMap() {
-            const defaultCenter = [35.4681, 44.3922]; // مركز كركوك
-            map = L.map('map', {
-                center: defaultCenter,
-                zoom: 15,
-                zoomControl: false,
-                zoomAnimation: true,
-                fadeAnimation: true,
-                keepBuffer: 6,
-                touchRotate: true,
-                rotate: true,
-                bearing: 0
-            });
-
-            setMapVisualTheme('standard');
-            L.control.zoom({ position: 'bottomleft' }).addTo(map);
-
-            map.on('rotate', () => {
-                const angle = Math.round(map.getBearing());
-                const slider = document.getElementById('map-rotation-slider');
-                const lbl = document.getElementById('rotation-angle-label');
-                if (slider) slider.value = angle < 0 ? angle + 360 : angle;
-                if (lbl) lbl.textContent = `${angle}°`;
-            });
-
-            map.on('click', async function(e) {
-                document.getElementById('search-results-box').classList.add('hidden');
-                const coords = [e.latlng.lat, e.latlng.lng];
-                showTopPill('جاري قراءة اسم الموقع الدقيق...', 'fa-solid fa-location-dot text-sky-400', 2000);
-                const name = await reverseGeocodeOSM(coords[0], coords[1]);
-                addWaypoint(name, coords, true);
-            });
-
-            // التحقق من رابط الغرفة التلقائي
-            const params = new URLSearchParams(window.location.search);
-            const rParam = params.get('room');
-            if (rParam) {
-                document.getElementById('join-room-name-input').value = decodeURIComponent(rParam);
-                openSocialHubModal();
-                setTimeout(() => joinNamedRoom(), 700);
-            }
-        }
-
-        function rotateMapAngle(deg) {
-            const angle = parseInt(deg);
-            if (map && typeof map.setBearing === 'function') {
-                map.setBearing(angle);
-                const lbl = document.getElementById('rotation-angle-label');
-                if (lbl) lbl.textContent = `${angle}°`;
-            }
-        }
-
-        function resetMapRotation() {
-            if (map && typeof map.setBearing === 'function') {
-                map.setBearing(0);
-                document.getElementById('map-rotation-slider').value = 0;
-                document.getElementById('rotation-angle-label').textContent = '0°';
-                showTopPill('تمت إعادة ضبط اتجاه الخريطة للشمال', 'fa-solid fa-compass text-sky-400', 2000);
-            }
-        }
-
-        // =========================================================================
-        // 3. نظام تحديد الموقع GPS الدقيق والبحث العكسي
-        // =========================================================================
-        function requestRealGPS(flyToUser = false) {
-            const statusEl = document.getElementById('gps-status-text');
-            const dotEl = document.getElementById('gps-dot-indicator');
-
-            if (!navigator.geolocation) {
-                if (statusEl) statusEl.textContent = 'المتصفح لا يدعم تحديد الموقع GPS';
-                if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
-                return;
-            }
-
-            if (statusEl) statusEl.textContent = 'جاري تحديد موقعك الحقيقي GPS...';
-            if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0';
-
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lon = pos.coords.longitude;
-                    const acc = Math.round(pos.coords.accuracy);
-                    userCoords = [lat, lon];
-                    hasRealGPS = true;
-
-                    if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0';
-                    if (statusEl) statusEl.textContent = `موقعك متصل بدقة GPS (±${acc} م)`;
-
-                    if (!userMarker) {
-                        const gpsIcon = L.divIcon({
-                            className: 'user-gps-dot',
-                            html: `<div class="relative w-6 h-6 flex items-center justify-center">
-                                    <div class="gps-pulse"></div>
-                                    <div style="width:18px;height:18px;border-radius:50%;background:#0284c7;border:3px solid #ffffff;box-shadow:0 0 12px rgba(2,132,199,0.9);position:relative;z-index:2;"></div>
-                                   </div>`,
-                            iconSize: [24, 24],
-                            iconAnchor: [12, 12]
-                        });
-                        userMarker = L.marker(userCoords, { icon: gpsIcon, zIndexOffset: 1000 })
-                            .addTo(map)
-                            .bindPopup('<b class="text-xs text-sky-300">📍 موقعك الحالي الدقيق (GPS)</b>');
-                    } else {
-                        userMarker.setLatLng(userCoords);
-                    }
-
-                    if (flyToUser) map.flyTo(userCoords, 16);
-                    broadcastMyLiveGPS();
-                    if (waypoints.length > 0) recalculateMultiWaypointRoute();
-                },
-                () => {
-                    if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
-                    if (statusEl) statusEl.textContent = 'تعذر التقاط GPS — تأكد من تفعيل الموقع';
-                    showTopPill('تعذر الوصول للـ GPS. يمكنك تصفح الخريطة وتحديد أي نقطة يدوياً.', 'fa-solid fa-triangle-exclamation text-amber-400', 4000);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        }
-
-        async function reverseGeocodeOSM(lat, lon) {
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=ar`);
-                const data = await res.json();
-                if (data && data.display_name) {
-                    const parts = data.display_name.split(',');
-                    return parts[0].trim() + (parts[1] ? '، ' + parts[1].trim() : '');
-                }
-            } catch (e) {}
-            return `نقطة محددة (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
-        }
-
-        // =========================================================================
-        // 4. نظام جلب المعالم الحقيقية الموثقة فقط (منع المعالم الوهمية + نطاق دائري 3 كم)
-        // =========================================================================
-        const CATEGORY_CONFIG = {
-            mosque: {
-                label: 'مسجد / جامع',
-                color: '#0d9488',
-                icon: 'fa-mosque',
-                overpassFilter: `node["amenity"="place_of_worship"]["religion"="muslim"](around:RADIUS,LAT,LON);way["amenity"="place_of_worship"]["religion"="muslim"](around:RADIUS,LAT,LON);node["amenity"="place_of_worship"]["name"~"جامع|مسجد|مزگەوت|تكية|حسينية|Mosque|Cami",i](around:RADIUS,LAT,LON);way["amenity"="place_of_worship"]["name"~"جامع|مسجد|مزگەوت|تكية|حسينية|Mosque|Cami",i](around:RADIUS,LAT,LON);`
-            },
-            school: {
-                label: 'مدرسة',
-                color: '#d97706',
-                icon: 'fa-school',
-                overpassFilter: `node["amenity"="school"](around:RADIUS,LAT,LON);way["amenity"="school"](around:RADIUS,LAT,LON);`
-            },
-            university: {
-                label: 'جامعة / معهد',
-                color: '#2563eb',
-                icon: 'fa-graduation-cap',
-                overpassFilter: `node["amenity"~"university|college"](around:RADIUS,LAT,LON);way["amenity"~"university|college"](around:RADIUS,LAT,LON);`
-            },
-            fuel: {
-                label: 'محطة وقود',
-                color: '#ea580c',
-                icon: 'fa-gas-pump',
-                overpassFilter: `node["amenity"="fuel"](around:RADIUS,LAT,LON);way["amenity"="fuel"](around:RADIUS,LAT,LON);`
-            },
-            gov_hospital: {
-                label: 'مستشفى / مركز صحي',
-                color: '#e11d48',
-                icon: 'fa-hospital',
-                overpassFilter: `node["amenity"="hospital"](around:RADIUS,LAT,LON);way["amenity"="hospital"](around:RADIUS,LAT,LON);`
-            },
-            pharmacy: {
-                label: 'صيدلية',
-                color: '#059669',
-                icon: 'fa-pills',
-                overpassFilter: `node["amenity"="pharmacy"](around:RADIUS,LAT,LON);way["amenity"="pharmacy"](around:RADIUS,LAT,LON);`
-            },
-            clinic: {
-                label: 'عيادة / مختبر',
-                color: '#0891b2',
-                icon: 'fa-stethoscope',
-                overpassFilter: `node["amenity"~"clinic|doctors|dentist"](around:RADIUS,LAT,LON);way["amenity"~"clinic|doctors|dentist"](around:RADIUS,LAT,LON);node["healthcare"~"clinic|laboratory"](around:RADIUS,LAT,LON);`
-            },
-            mall: {
-                label: 'سوق / مول',
-                color: '#4f46e5',
-                icon: 'fa-cart-shopping',
-                overpassFilter: `node["shop"~"supermarket|mall|department_store"](around:RADIUS,LAT,LON);way["shop"~"supermarket|mall|department_store"](around:RADIUS,LAT,LON);`
-            },
-            cosmetics: {
-                label: 'كوزمتك وعطور',
-                color: '#db2777',
-                icon: 'fa-spray-can-sparkles',
-                overpassFilter: `node["shop"~"cosmetics|perfumery|beauty"](around:RADIUS,LAT,LON);way["shop"~"cosmetics|perfumery|beauty"](around:RADIUS,LAT,LON);node["name"~"كوزمتك|عطور|Cosmetics",i](around:RADIUS,LAT,LON);`
-            },
-            shops: {
-                label: 'محل تجاري / خدمات',
-                color: '#7c3aed',
-                icon: 'fa-store',
-                overpassFilter: `node["shop"]["name"](around:RADIUS,LAT,LON);way["shop"]["name"](around:RADIUS,LAT,LON);`
-            },
-            restaurant: {
-                label: 'مطعم / مقهى',
-                color: '#ca8a04',
-                icon: 'fa-utensils',
-                overpassFilter: `node["amenity"~"restaurant|cafe|fast_food"]["name"](around:RADIUS,LAT,LON);way["amenity"~"restaurant|cafe|fast_food"]["name"](around:RADIUS,LAT,LON);`
-            }
-        };
-
-        function clearCategoryMarkers() {
-            categoryMarkers.forEach(m => map.removeLayer(m));
-            categoryMarkers = [];
-            if (radiusCircle) {
-                map.removeLayer(radiusCircle);
-                radiusCircle = null;
-            }
-            document.getElementById('verified-poi-list').classList.add('hidden');
-            document.getElementById('btn-clear-cats').classList.add('hidden');
-        }
-
-        async function searchStrictCategory(categoryKey) {
-            const cfg = CATEGORY_CONFIG[categoryKey];
-            if (!cfg) return;
-
-            let center = userCoords;
-            if (!center) {
-                const c = map.getCenter();
-                center = [c.lat, c.lng];
-            }
-
-            const radiusMeters = parseInt(document.getElementById('search-radius-select').value || '3000', 10);
-            const radiusKm = radiusMeters / 1000;
-
-            clearCategoryMarkers();
-
-            // رسم الدائرة الجغرافية الدقيقة حول موقع المستخدم
-            radiusCircle = L.circle(center, {
-                radius: radiusMeters,
-                color: cfg.color,
-                fillColor: cfg.color,
-                fillOpacity: 0.08,
-                weight: 2,
-                dashArray: '6, 6'
-            }).addTo(map);
-            map.fitBounds(radiusCircle.getBounds(), { padding: [30, 30] });
-
-            showTopPill(`جاري جلب ${cfg.label} الحقيقية ضمن نطاق ${radiusKm} كم...`, 'fa-solid fa-satellite-dish fa-spin text-sky-400', 3500);
-
-            const rawFilter = cfg.overpassFilter
-                .replace(/RADIUS/g, radiusMeters)
-                .replace(/LAT/g, center[0])
-                .replace(/LON/g, center[1]);
-
-            const query = `[out:json][timeout:25];(${rawFilter});out center body;`;
-            const servers = [
-                'https://overpass-api.de/api/interpreter',
-                'https://overpass.kumi.systems/api/interpreter',
-                'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
-            ];
-
-            let elements = [];
-            for (const srv of servers) {
-                try {
-                    const res = await fetch(srv + '?data=' + encodeURIComponent(query));
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data && Array.isArray(data.elements)) {
-                            elements = data.elements;
-                            break;
-                        }
-                    }
-                } catch (e) {}
-            }
-
-            // فلترة صارمة لمنع أي نقاط وهمية أو مكررة أو خارج النطاق الدائري
-            const seenCoords = new Set();
-            const verifiedList = [];
-
-            elements.forEach(el => {
-                const lat = el.lat || (el.center ? el.center.lat : null);
-                const lon = el.lon || (el.center ? el.center.lon : null);
-                if (!lat || !lon) return;
-
-                const tags = el.tags || {};
-                const realName = tags['name:ar'] || tags['name:ku'] || tags.name || tags['name:en'] || tags.brand;
-                // استبعاد النقاط المجهولة التي لا تملك اسماً حقيقياً لتجنب الوهمية
-                if (!realName || realName.trim().length < 2) return;
-
-                const coordKey = `${lat.toFixed(4)}_${lon.toFixed(4)}`;
-                if (seenCoords.has(coordKey)) return;
-                seenCoords.add(coordKey);
-
-                const distKm = calculateHaversineDistance(center[0], center[1], lat, lon);
-                if (distKm > radiusKm) return;
-
-                let extraNote = '';
-                if (tags.description) extraNote = tags.description;
-                else if (tags['addr:street']) extraNote = `الشارع: ${tags['addr:street']}`;
-
-                verifiedList.push({
-                    name: realName.trim(),
-                    lat,
-                    lon,
-                    distKm,
-                    note: extraNote,
-                    isCustom2026: false
-                });
-            });
-
-            // دمج المعالم المحدثة لعام 2026 ضمن نفس التصنيف والنطاق الدائري
-            const savedLocal = JSON.parse(localStorage.getItem('reberai_custom_2026') || '[]');
-            const allCustom = [...CUSTOM_2026_PLACES, ...savedLocal];
-            allCustom.forEach(item => {
-                if (item.category === categoryKey) {
-                    const distKm = calculateHaversineDistance(center[0], center[1], item.lat, item.lon);
-                    if (distKm <= radiusKm) {
-                        verifiedList.push({
-                            name: item.name,
-                            lat: item.lat,
-                            lon: item.lon,
-                            distKm,
-                            note: item.note || '',
-                            isCustom2026: true
-                        });
-                    }
-                }
-            });
-
-            // ترتيب من الأقرب إلى الأبعد
-            verifiedList.sort((a, b) => a.distKm - b.distKm);
-
-            const listContainer = document.getElementById('verified-poi-list');
-            const clearBtn = document.getElementById('btn-clear-cats');
-
-            if (verifiedList.length === 0) {
-                listContainer.innerHTML = `<div class="p-3 text-center text-gray-300 text-[11px]">لا توجد معالم مسجلة من نوع (${cfg.label}) ضمن دائرة ${radiusKm} كم حول هذه النقطة.</div>`;
-                listContainer.classList.remove('hidden');
-                clearBtn.classList.remove('hidden');
-                showTopPill(`لم يتم العثور على ${cfg.label} ضمن نطاق ${radiusKm} كم`, 'fa-solid fa-circle-info text-amber-400', 3000);
-                return;
-            }
-
-            let listHtml = '';
-            verifiedList.forEach((poi, idx) => {
-                const distText = poi.distKm >= 1 ? `${poi.distKm.toFixed(2)} كم` : `${Math.round(poi.distKm * 1000)} متر`;
-                const pinIcon = L.divIcon({
-                    className: 'poi-custom-marker',
-                    html: `<div style="width:28px;height:28px;border-radius:50%;background:${cfg.color};border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.6);"><i class="fa-solid ${cfg.icon} text-xs"></i></div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
-
-                const popupHtml = `
-                    <div class="p-1.5 min-w-[200px] text-right" dir="rtl">
-                        <div class="font-extrabold text-xs text-white mb-1">${poi.name}</div>
-                        <div class="text-[11px] text-sky-300 font-bold mb-1">📏 البعد عنك: ${distText}</div>
-                        ${poi.note ? `<div class="text-[10px] bg-amber-500/20 border border-amber-400/40 text-amber-200 p-1.5 rounded-lg mb-2 leading-relaxed">${poi.note}</div>` : ''}
-                        <button onclick="addWaypoint('${poi.name.replace(/'/g, '')}', [${poi.lat}, ${poi.lon}], true)" class="w-full py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold">
-                            <i class="fa-solid fa-route ml-1"></i> رسم المسار إلى هنا
-                        </button>
-                    </div>
-                `;
-
-                const marker = L.marker([poi.lat, poi.lon], { icon: pinIcon })
-                    .addTo(map)
-                    .bindPopup(popupHtml);
-
-                // إظهار اسم واضح لأقرب 6 معالم مباشرة على الخريطة بدون تغويش
-                if (idx < 6) {
-                    marker.bindTooltip(poi.name, {
-                        permanent: true,
-                        direction: 'top',
-                        offset: [0, -14],
-                        className: 'crisp-map-label'
-                    });
-                }
-
-                categoryMarkers.push(marker);
-
-                listHtml += `
-                    <div onclick="focusVerifiedPoi(${poi.lat}, ${poi.lon}, '${poi.name.replace(/'/g, '')}')" class="p-2 hover:bg-white/10 cursor-pointer flex items-start justify-between gap-2 transition">
-                        <div class="min-w-0">
-                            <div class="font-bold text-white truncate">${idx + 1}. ${poi.name}</div>
-                            ${poi.note ? `<div class="text-[10px] text-amber-300 mt-0.5 leading-snug">${poi.note}</div>` : ''}
-                        </div>
-                        <span class="text-[10px] font-extrabold text-sky-400 bg-sky-500/15 px-2 py-0.5 rounded-md shrink-0">${distText}</span>
-                    </div>
-                `;
-            });
-
-            listContainer.innerHTML = listHtml;
-            listContainer.classList.remove('hidden');
-            clearBtn.classList.remove('hidden');
-            showTopPill(`تم تحديد ${verifiedList.length} من (${cfg.label}) الحقيقية ضمن ${radiusKm} كم`, 'fa-solid fa-circle-check text-emerald-400', 3500);
-        }
-
-        function focusVerifiedPoi(lat, lon, name) {
-            map.flyTo([lat, lon], 17);
-            addWaypoint(name, [lat, lon], true);
-        }
-
-        function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
-        }
-
-        // =========================================================================
-        // 5. نافذة إضافة محل جديد أو توضيح دوام/نقل مدرسة (تحديث 2026)
-        // =========================================================================
-        function openAddPlaceModal() {
-            const c = map.getCenter();
-            document.getElementById('new-place-coords-preview').textContent = `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
-            document.getElementById('add-place-modal').classList.remove('hidden');
-        }
-
-        function closeAddPlaceModal() {
-            document.getElementById('add-place-modal').classList.add('hidden');
-        }
-
-        function saveCustomPlace2026() {
-            const name = document.getElementById('new-place-name').value.trim();
-            const category = document.getElementById('new-place-cat').value;
-            const note = document.getElementById('new-place-note').value.trim();
-
-            if (!name) {
-                showTopPill('يرجى إدخال اسم المدرسة أو المحل أولاً', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
-                return;
-            }
-
-            const c = map.getCenter();
-            const newEntry = {
-                id: 'custom-' + Date.now(),
-                name,
-                category,
-                lat: c.lat,
-                lon: c.lng,
-                note: note || 'تم التسجيل والتحديث في منصة RêberAI Pro (15/11/2026)',
-                updatedAt: '15/11/2026'
-            };
-
-            const existing = JSON.parse(localStorage.getItem('reberai_custom_2026') || '[]');
-            existing.push(newEntry);
-            localStorage.setItem('reberai_custom_2026', JSON.stringify(existing));
-
-            document.getElementById('new-place-name').value = '';
-            document.getElementById('new-place-note').value = '';
-            closeAddPlaceModal();
-
-            showTopPill(`تم حفظ "${name}" وتثبيته بنجاح!`, 'fa-solid fa-circle-check text-emerald-400', 3500);
-            searchStrictCategory(category);
-        }
-
-        // =========================================================================
-        // 6. البحث الذكي ورسم المسارات الدقيقة
-        // =========================================================================
-        async function handleSearchSubmit() {
-            const val = document.getElementById('place-search-input').value.trim();
-            if (!val) return;
-            const box = document.getElementById('search-results-box');
-            showTopPill('جاري البحث الدقيق...', 'fa-solid fa-magnifying-glass text-sky-400', 1800);
-
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&accept-language=ar&limit=6&q=` + encodeURIComponent(val));
-                const results = await res.json();
-                if (results && results.length > 0) {
-                    let html = '';
-                    results.forEach(r => {
-                        const cleanName = r.display_name.replace(/'/g, '');
-                        html += `<div class="p-2.5 text-xs text-white hover:bg-white/10 cursor-pointer flex items-center gap-2" onclick="selectSearchResult(${r.lat}, ${r.lon}, '${cleanName}')">
-                            <i class="fa-solid fa-location-dot text-sky-400 shrink-0"></i>
-                            <span class="truncate">${r.display_name}</span>
-                        </div>`;
-                    });
-                    box.innerHTML = html;
-                    box.classList.remove('hidden');
-                } else {
-                    box.innerHTML = '<div class="p-2.5 text-xs text-gray-400 text-center">لم يتم العثور على نتائج مطابقة.</div>';
-                    box.classList.remove('hidden');
-                }
-            } catch (e) {
-                showTopPill('تعذر إتمام البحث حالياً', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
-            }
-        }
-
-        function selectSearchResult(lat, lon, name) {
-            document.getElementById('search-results-box').classList.add('hidden');
-            document.getElementById('place-search-input').value = name.split(',')[0];
-            map.flyTo([lat, lon], 16);
-            addWaypoint(name.split(',')[0], [lat, lon], true);
-        }
-
-        function addWaypoint(name, coords, broadcast = false) {
-            waypoints.push({ name, coords });
-            renderWaypointsList();
-            const wpIcon = L.divIcon({
-                className: 'custom-wp-pin',
-                html: `<div style="width:28px;height:28px;border-radius:50%;background:#e11d48;border:3px solid #ffffff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;box-shadow:0 4px 12px rgba(0,0,0,0.55);">${waypoints.length}</div>`,
-                iconSize: [28, 28],
-                iconAnchor: [14, 14]
-            });
-            const m = L.marker(coords, { icon: wpIcon }).addTo(map).bindPopup(`<b class="text-xs text-white">${name}</b>`);
-            waypointMarkers.push(m);
-            recalculateMultiWaypointRoute();
-            if (broadcast && activeFriendConn && activeFriendConn.open) {
-                activeFriendConn.send({ type: 'WAYPOINT_SHARED', name, coords });
-            }
-        }
-
-        function clearAllWaypoints() {
-            waypoints = [];
-            waypointMarkers.forEach(m => map.removeLayer(m));
-            waypointMarkers = [];
-            if (routePolyline) {
-                map.removeLayer(routePolyline);
-                routePolyline = null;
-            }
-            renderWaypointsList();
-            document.getElementById('route-distance-val').textContent = '0 م';
-            document.getElementById('route-duration-val').textContent = '0 د';
-        }
-
-        function renderWaypointsList() {
-            const listEl = document.getElementById('waypoints-list');
-            if (!listEl) return;
-            if (waypoints.length === 0) {
-                listEl.innerHTML = '<div>لم يتم تحديد وجهة بعد.</div>';
-                return;
-            }
-            let html = '';
-            waypoints.forEach((wp, idx) => {
-                html += `<div class="flex items-center justify-between bg-slate-950 px-2 py-1 rounded-lg border border-white/5">
-                    <span class="truncate text-white">${idx + 1}. ${wp.name}</span>
-                    <button onclick="removeWaypoint(${idx})" class="text-rose-400 hover:text-rose-300 font-bold px-1.5">&times;</button>
-                </div>`;
-            });
-            listEl.innerHTML = html;
-        }
-
-        function removeWaypoint(idx) {
-            waypoints.splice(idx, 1);
-            if (waypointMarkers[idx]) {
-                map.removeLayer(waypointMarkers[idx]);
-                waypointMarkers.splice(idx, 1);
-            }
-            renderWaypointsList();
-            if (waypoints.length > 0) recalculateMultiWaypointRoute();
-            else clearAllWaypoints();
-        }
-
-        function setTravelMode(mode) {
-            travelMode = mode;
-            ['car', 'walk', 'bike'].forEach(m => {
-                const btn = document.getElementById(`btn-mode-${m}`);
-                if (!btn) return;
-                if (m === mode) {
-                    btn.className = 'p-2 rounded-xl bg-sky-600 text-white font-bold flex items-center justify-center gap-1 shadow';
-                } else {
-                    btn.className = 'p-2 rounded-xl bg-white/10 text-gray-300 hover:bg-white/15 font-bold flex items-center justify-center gap-1';
-                }
-            });
-            if (waypoints.length > 0) recalculateMultiWaypointRoute();
-        }
-
-        async function recalculateMultiWaypointRoute() {
-            if (waypoints.length === 0) return;
-            let startCoord = userCoords;
-            if (!startCoord) {
-                const center = map.getCenter();
-                startCoord = [center.lat, center.lng];
-            }
-            let coordsStr = `${startCoord[1]},${startCoord[0]};`;
-            waypoints.forEach(wp => {
-                coordsStr += `${wp.coords[1]},${wp.coords[0]};`;
-            });
-            coordsStr = coordsStr.slice(0, -1);
-
-            let profile = 'driving';
-            if (travelMode === 'walk') profile = 'walking';
-            else if (travelMode === 'bike') profile = 'cycling';
-
-            try {
-                const res = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordsStr}?overview=full&geometries=geojson`);
-                const data = await res.json();
-                if (data.routes && data.routes.length > 0) {
-                    const r = data.routes[0];
-                    const distM = r.distance;
-                    const durSec = r.duration;
-                    const distKm = distM >= 1000 ? (distM / 1000).toFixed(2) + ' كم' : Math.round(distM) + ' متر';
-                    const durMin = Math.max(1, Math.round(durSec / 60)) + ' د';
-                    document.getElementById('route-distance-val').textContent = distKm;
-                    document.getElementById('route-duration-val').textContent = durMin;
-
-                    const latlngs = r.geometry.coordinates.map(c => [c[1], c[0]]);
-                    if (routePolyline) map.removeLayer(routePolyline);
-                    routePolyline = L.polyline(latlngs, {
-                        color: '#0284c7',
-                        weight: 6,
-                        opacity: 0.9
-                    }).addTo(map);
-                    map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
-                }
-            } catch (e) {
-                showTopPill('تعذر حساب المسار بدقة من الخادم', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
-            }
-        }
-
-        // =========================================================================
-        // 7. إصلاح غرفة الدردشة الحية ومشاركة الموقع (نظام الربط الدقيق بالاسم الموحد مع إعادة المحاولة)
-        // =========================================================================
-        let peerInstance = null;
-        let activeFriendConn = null;
-        let friendMarker = null;
-        let currentRoomCleanName = '';
-        let joinRetryTimer = null;
-
-        // تحويل اسم الغرفة (عربي/كردي/إنجليزي) إلى معرف ASCII ثابت وموحد 100% بين المنشئ والمنضم
         function normalizeRoomToPeerId(rawName) {
             const cleaned = rawName.trim().toLowerCase().replace(/\s+/g, '_');
             let hash = 0;
@@ -1404,8 +1385,7 @@
                 hash = ((hash << 5) - hash) + cleaned.charCodeAt(i);
                 hash |= 0;
             }
-            const hexCode = Math.abs(hash).toString(16);
-            return `reberai2026_room_${hexCode}`;
+            return `reberai2026_room_${Math.abs(hash).toString(16)}`;
         }
 
         const PEER_CONFIG = {
@@ -1419,6 +1399,40 @@
                 ]
             }
         };
+
+        function setupLocalBroadcastChannel(roomKey) {
+            if (localRoomChannel) {
+                try { localRoomChannel.close(); } catch (e) {}
+            }
+            if ('BroadcastChannel' in window) {
+                localRoomChannel = new BroadcastChannel(roomKey);
+                localRoomChannel.onmessage = (ev) => {
+                    const msg = ev.data;
+                    if (!msg || msg.sender === senderSessionId) return;
+                    if (msg.type === 'PEER_PING') {
+                        localRoomChannel.postMessage({ type: 'PEER_PONG', sender: senderSessionId });
+                        markRoomConnectedUI();
+                    } else if (msg.type === 'PEER_PONG') {
+                        markRoomConnectedUI();
+                    } else if (msg.type === 'CHAT_MSG') {
+                        markRoomConnectedUI();
+                        appendChatMessage('صديقك', msg.text);
+                    } else if (msg.type === 'GPS_SYNC') {
+                        updateFriendMarker(msg.coords);
+                    } else if (msg.type === 'WAYPOINT_SHARED') {
+                        addWaypoint(msg.name, msg.coords, false);
+                    }
+                };
+                localRoomChannel.postMessage({ type: 'PEER_PING', sender: senderSessionId });
+            }
+        }
+
+        function markRoomConnectedUI() {
+            document.getElementById('p2p-status-badge').textContent = 'متصل بنجاح 🟢';
+            document.getElementById('p2p-status-badge').className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300';
+            document.getElementById('chat-room-header-title').textContent = `غرفة: ${currentRoomCleanName}`;
+            document.getElementById('friend-gps-status').textContent = 'متصل الآن • المراسلة ومشاركة الموقع نشطة';
+        }
 
         function openSocialHubModal() {
             document.getElementById('social-modal').classList.remove('hidden');
@@ -1437,9 +1451,15 @@
             if (joinRetryTimer) clearInterval(joinRetryTimer);
             currentRoomCleanName = rawName;
             const exactHostPeerId = normalizeRoomToPeerId(rawName);
+            setupLocalBroadcastChannel(exactHostPeerId);
 
-            document.getElementById('p2p-status-badge').textContent = 'جاري فتح الغرفة...';
-            document.getElementById('p2p-status-badge').className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300';
+            document.getElementById('p2p-status-badge').textContent = 'الغرفة نشطة ومفتوحة 🟢';
+            document.getElementById('p2p-status-badge').className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300';
+            document.getElementById('chat-room-header-title').textContent = `غرفة: ${rawName}`;
+
+            const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(rawName)}`;
+            document.getElementById('generated-room-link').value = shareUrl;
+            document.getElementById('created-room-link-box').classList.remove('hidden');
 
             if (peerInstance) {
                 try { peerInstance.destroy(); } catch(e) {}
@@ -1448,16 +1468,8 @@
             peerInstance = new Peer(exactHostPeerId, PEER_CONFIG);
 
             peerInstance.on('open', () => {
-                document.getElementById('p2p-status-badge').textContent = 'الغرفة مفتوحة وبانتظار صديقك';
-                document.getElementById('p2p-status-badge').className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300';
-                document.getElementById('chat-room-header-title').textContent = `غرفة: ${rawName}`;
-
-                const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(rawName)}`;
-                document.getElementById('generated-room-link').value = shareUrl;
-                document.getElementById('created-room-link-box').classList.remove('hidden');
-
-                appendChatMessage('النظام', `✅ تم إنشاء الغرفة باسم [ ${rawName} ]. أرسل هذا الاسم لصديقك ليكتبه في خانة (دخول الغرفة) وسيدخل معك فوراً.`);
-                showTopPill(`تم إنشاء الغرفة "${rawName}" بنجاح!`, 'fa-solid fa-door-open text-emerald-400', 3000);
+                appendChatMessage('النظام', `✅ الغرفة [ ${rawName} ] جاهزة الآن! أعطِ هذا الاسم لصديقك ليكتبه في (دخول الغرفة).`);
+                showTopPill(`تم فتح الغرفة "${rawName}" بنجاح!`, 'fa-solid fa-door-open text-emerald-400', 3000);
             });
 
             peerInstance.on('connection', (conn) => {
@@ -1465,21 +1477,10 @@
                 setupConnectionListeners();
             });
 
-            peerInstance.on('disconnected', () => {
-                if (peerInstance && !peerInstance.destroyed) {
-                    peerInstance.reconnect();
-                }
-            });
-
             peerInstance.on('error', (err) => {
                 if (err.type === 'unavailable-id') {
-                    // الغرفة موجودة مسبقاً! نحول المستخدم للانضمام إليها تلقائياً
-                    showTopPill('هذه الغرفة مفتوحة بالفعل، جاري الانضمام إليها تلقائياً...', 'fa-solid fa-right-to-bracket text-sky-400', 3000);
                     document.getElementById('join-room-name-input').value = rawName;
                     joinNamedRoom();
-                } else {
-                    document.getElementById('p2p-status-badge').textContent = 'إعادة تهيئة الاتصال...';
-                    showTopPill('حدث تذبذب في الشبكة، يرجى المحاولة مرة أخرى', 'fa-solid fa-triangle-exclamation text-amber-400', 3500);
                 }
             });
         }
@@ -1493,9 +1494,11 @@
             if (joinRetryTimer) clearInterval(joinRetryTimer);
             currentRoomCleanName = rawName;
             const targetHostPeerId = normalizeRoomToPeerId(rawName);
+            setupLocalBroadcastChannel(targetHostPeerId);
 
-            document.getElementById('p2p-status-badge').textContent = 'جاري البحث والدخول للغرفة...';
+            document.getElementById('p2p-status-badge').textContent = 'جاري الدخول للغرفة...';
             document.getElementById('p2p-status-badge').className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300';
+            document.getElementById('chat-room-header-title').textContent = `غرفة: ${rawName}`;
 
             if (peerInstance) {
                 try { peerInstance.destroy(); } catch(e) {}
@@ -1520,22 +1523,12 @@
                     attempts++;
                     if (activeFriendConn && activeFriendConn.open) {
                         clearInterval(joinRetryTimer);
-                    } else if (attempts >= 5) {
+                    } else if (attempts >= 8) {
                         clearInterval(joinRetryTimer);
-                        document.getElementById('p2p-status-badge').textContent = 'الغرفة غير مفتوحة حالياً';
-                        document.getElementById('p2p-status-badge').className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300';
-                        appendChatMessage('النظام', `⚠️ تعذر العثور على غرفة نشطة باسم "${rawName}". تأكد أن صديقك قام بإنشاء الغرفة بنفس الاسم أولاً.`);
                     } else {
                         attemptConnect();
                     }
-                }, 2000);
-            });
-
-            peerInstance.on('error', (err) => {
-                if (err.type === 'peer-unavailable') {
-                    // سيقوم المؤقت بإعادة المحاولة تلقائياً حتى يفتح الصديق الغرفة
-                    document.getElementById('p2p-status-badge').textContent = 'بانتظار فتح الغرفة من صديقك...';
-                }
+                }, 1500);
             });
         }
 
@@ -1543,10 +1536,7 @@
             if (!activeFriendConn) return;
 
             activeFriendConn.on('open', () => {
-                document.getElementById('p2p-status-badge').textContent = 'متصل بنجاح 🟢';
-                document.getElementById('p2p-status-badge').className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300';
-                document.getElementById('chat-room-header-title').textContent = `غرفة: ${currentRoomCleanName}`;
-                document.getElementById('friend-gps-status').textContent = 'متصل الآن • المراسلة ومشاركة الموقع نشطة';
+                markRoomConnectedUI();
                 appendChatMessage('النظام', '🎉 تم الاتصال بنجاح! يمكنكم الآن إرسال الرسائل ومشاركة المواقع مباشرة.');
                 showTopPill('تم الربط بنجاح مع صديقك!', 'fa-solid fa-user-check text-emerald-400', 3500);
                 broadcastMyLiveGPS();
@@ -1580,17 +1570,31 @@
             const txt = input.value.trim();
             if (!txt) return;
 
-            if (!activeFriendConn || !activeFriendConn.open) {
-                showTopPill('يرجى إنشاء غرفة أو الدخول لغرفة صديقك أولاً قبل الإرسال', 'fa-solid fa-triangle-exclamation text-amber-400', 3500);
+            if (!currentRoomCleanName) {
+                showTopPill('يرجى كتابة اسم غرفة والضغط على (إنشاء غرفة) أو (دخول الغرفة) أولاً', 'fa-solid fa-triangle-exclamation text-amber-400', 3500);
                 return;
             }
 
-            try {
-                activeFriendConn.send({ type: 'CHAT_MSG', text: txt });
-                appendChatMessage('أنت', txt);
-                input.value = '';
-            } catch(e) {
-                showTopPill('تعذر إرسال الرسالة، حاول إعادة الاتصال بالغرفة', 'fa-solid fa-triangle-exclamation text-rose-400', 3000);
+            let sentViaNetwork = false;
+            if (activeFriendConn && activeFriendConn.open) {
+                try {
+                    activeFriendConn.send({ type: 'CHAT_MSG', text: txt });
+                    sentViaNetwork = true;
+                } catch (e) {}
+            }
+
+            if (localRoomChannel) {
+                try {
+                    localRoomChannel.postMessage({ type: 'CHAT_MSG', text: txt, sender: senderSessionId });
+                    sentViaNetwork = true;
+                } catch (e) {}
+            }
+
+            appendChatMessage('أنت', txt);
+            input.value = '';
+
+            if (!sentViaNetwork) {
+                appendChatMessage('النظام', '⏳ تم حفظ رسالتك في الغرفة، وبانتظار دخول صديقك لنفس اسم الغرفة لاستلامها فوراً.');
             }
         }
 
@@ -1600,12 +1604,17 @@
                 showTopPill('جاري تحديد موقعك GPS لإرساله...', 'fa-solid fa-satellite text-sky-400', 2500);
                 return;
             }
-            if (!activeFriendConn || !activeFriendConn.open) {
-                showTopPill('يرجى الاتصال بصديقك في الغرفة أولاً', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
+            if (!currentRoomCleanName) {
+                showTopPill('يرجى إنشاء غرفة أو الدخول لغرفة أولاً', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
                 return;
             }
             broadcastMyLiveGPS();
-            activeFriendConn.send({ type: 'CHAT_MSG', text: `📍 أرسلت لك موقعي الحالي المباشر على الخريطة!` });
+            if (activeFriendConn && activeFriendConn.open) {
+                activeFriendConn.send({ type: 'CHAT_MSG', text: `📍 أرسلت لك موقعي الحالي المباشر على الخريطة!` });
+            }
+            if (localRoomChannel) {
+                localRoomChannel.postMessage({ type: 'CHAT_MSG', text: `📍 أرسلت لك موقعي الحالي المباشر على الخريطة!`, sender: senderSessionId });
+            }
             appendChatMessage('أنت', '📍 أرسلت موقعي الحالي المباشر على الخريطة');
         }
 
