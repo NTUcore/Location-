@@ -269,6 +269,16 @@
                     </button>
                 </div>
 
+                <!-- Lifestyle-Centric Routing Options (Scenic Route & Wheelchair Accessibility) -->
+                <div class="grid grid-cols-2 gap-1 bg-black/30 p-1 rounded-xl">
+                    <button onclick="setTravelMode('scenic')" id="mode-scenic" class="py-1.5 rounded-lg text-[10px] font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
+                        <i class="fa-solid fa-tree text-emerald-400"></i> <span data-i18n="scenic">مسار سياحي/جمالي</span>
+                    </button>
+                    <button onclick="setTravelMode('wheelchair')" id="mode-wheelchair" class="py-1.5 rounded-lg text-[10px] font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition">
+                        <i class="fa-solid fa-wheelchair text-sky-400"></i> <span data-i18n="wheelchair">ذوي الاحتياجات</span>
+                    </button>
+                </div>
+
                 <div>
                     <div class="flex items-center justify-between mb-1.5">
                         <span class="text-[11px] font-extrabold text-gray-300" data-i18n="waypointsTitle">الوجهات المحددة (اضغط على الخريطة لإضافة):</span>
@@ -325,35 +335,124 @@
                     <span data-i18n="alert">تنبيه</span>
                 </button>
             </div>
+
+            <!-- 6. Social Maps, Curator Lists & Indoor Navigation Hub -->
+            <div class="grid grid-cols-2 gap-1.5 pt-1">
+                <button onclick="openSocialHubModal()" class="p-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-users"></i>
+                    <span data-i18n="socialHub">خرائط اجتماعية وخبراء</span>
+                </button>
+                <button onclick="openIndoorModal()" class="p-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-building-user"></i>
+                    <span data-i18n="indoorNav">ملاحة داخلية ورفوف</span>
+                </button>
+            </div>
         </div>
     </aside>
 
-    <!-- Local Road Hazard Reporting Modal -->
+    <!-- Local Crowdsourced Micro-Reporting Modal (Traffic, Night Safety & Street Weather) -->
     <div id="hazard-modal" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="glass-panel w-full max-w-sm rounded-3xl p-5 border border-white/15 shadow-2xl">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="text-base font-extrabold text-white" data-i18n="reportTitle">تسجيل تنبيه طريق (محلي)</h3>
+                <h3 class="text-base font-extrabold text-white" data-i18n="reportTitle">بلاغات المجتمع والأمان الفورية</h3>
                 <button onclick="closeHazardModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-            <p class="text-[11px] text-gray-400 mb-4">يُحفظ التنبيه في ذاكرة جهازك عند موقعك الحالي.</p>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="addLocalHazard('traffic', 'ازدحام / حادث')" class="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25 flex flex-col items-center gap-2 transition">
-                    <i class="fa-solid fa-car-burst text-2xl text-rose-400"></i>
-                    <span class="text-xs font-bold" data-i18n="traffic">ازدحام / حادث</span>
+            <p class="text-[11px] text-gray-400 mb-3">اختر نوع البلاغ لتنبيه المستخدمين وحماية المشاة والمركبات:</p>
+            <div class="grid grid-cols-2 gap-2.5">
+                <button onclick="addLocalHazard('traffic', 'ازدحام / حادث')" class="p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25 flex flex-col items-center gap-1.5 transition">
+                    <i class="fa-solid fa-car-burst text-xl text-rose-400"></i>
+                    <span class="text-[11px] font-bold" data-i18n="traffic">ازدحام / حادث</span>
                 </button>
-                <button onclick="addLocalHazard('roadwork', 'أعمال صيانة')" class="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 flex flex-col items-center gap-2 transition">
-                    <i class="fa-solid fa-person-digging text-2xl text-amber-400"></i>
-                    <span class="text-xs font-bold" data-i18n="roadwork">أعمال صيانة</span>
+                <button onclick="addLocalHazard('roadwork', 'أعمال صيانة')" class="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 flex flex-col items-center gap-1.5 transition">
+                    <i class="fa-solid fa-person-digging text-xl text-amber-400"></i>
+                    <span class="text-[11px] font-bold" data-i18n="roadwork">أعمال صيانة</span>
                 </button>
-                <button onclick="addLocalHazard('camera', 'كاميرا مراقبة')" class="p-3.5 rounded-2xl bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 flex flex-col items-center gap-2 transition">
-                    <i class="fa-solid fa-video text-2xl text-blue-400"></i>
-                    <span class="text-xs font-bold" data-i18n="camera">كاميرا مراقبة</span>
+                <button onclick="addLocalHazard('dark_street', 'شارع غير مضاء / مضايقات')" class="p-3 rounded-2xl bg-purple-500/15 border border-purple-500/30 hover:bg-purple-500/25 flex flex-col items-center gap-1.5 transition">
+                    <i class="fa-solid fa-moon text-xl text-purple-400"></i>
+                    <span class="text-[11px] font-bold text-center">إضاءة ضعيفة / أمان ليلي</span>
                 </button>
-                <button onclick="addLocalHazard('closed', 'طريق مغلق')" class="p-3.5 rounded-2xl bg-purple-500/15 border border-purple-500/30 hover:bg-purple-500/25 flex flex-col items-center gap-2 transition">
-                    <i class="fa-solid fa-road-barrier text-2xl text-purple-400"></i>
-                    <span class="text-xs font-bold" data-i18n="closed">طريق مغلق</span>
+                <button onclick="addLocalHazard('stray_dogs', 'كلاب ضالة في الشارع')" class="p-3 rounded-2xl bg-orange-500/15 border border-orange-500/30 hover:bg-orange-500/25 flex flex-col items-center gap-1.5 transition">
+                    <i class="fa-solid fa-dog text-xl text-orange-400"></i>
+                    <span class="text-[11px] font-bold text-center">تنبيه كلاب ضالة</span>
+                </button>
+                <button onclick="addLocalHazard('flood', 'تجمع مياه أمطار / فيضان')" class="p-3 rounded-2xl bg-sky-500/15 border border-sky-500/30 hover:bg-sky-500/25 flex flex-col items-center gap-1.5 transition">
+                    <i class="fa-solid fa-water text-xl text-sky-400"></i>
+                    <span class="text-[11px] font-bold text-center">تجمع مياه أمطار</span>
+                </button>
+                <button onclick="addLocalHazard('slippery', 'طريق زلق / غبار كثيف')" class="p-3 rounded-2xl bg-teal-500/15 border border-teal-500/30 hover:bg-teal-500/25 flex flex-col items-center gap-1.5 transition">
+                    <i class="fa-solid fa-smog text-xl text-teal-400"></i>
+                    <span class="text-[11px] font-bold text-center">طريق زلق / غبار</span>
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Social Live Maps & Curator Lists Modal -->
+    <div id="social-modal" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-5 border border-white/15 shadow-2xl flex flex-col gap-3.5 max-h-[85vh] overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-users text-indigo-400"></i> خرائط التواصل والخبراء
+                </h3>
+                <button onclick="closeSocialHubModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <!-- Shared Live Group Map -->
+            <div class="bg-indigo-950/50 border border-indigo-500/30 p-3 rounded-2xl">
+                <div class="text-xs font-extrabold text-indigo-300 mb-1"><i class="fa-solid fa-tower-broadcast mr-1"></i> خريطة الرحلة الجماعية المشتركة</div>
+                <p class="text-[11px] text-gray-300 mb-2">أنشئ رابطاً لمشاركة موقعك الحالي ووجهاتك مع أصدقائك أثناء الرحلة.</p>
+                <div class="flex gap-2">
+                    <button onclick="shareLiveGroupMap()" class="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition">
+                        <i class="fa-solid fa-share-nodes mr-1"></i> نسخ رابط التتبع المباشر
+                    </button>
+                </div>
+            </div>
+
+            <!-- Influencer & Curator Maps -->
+            <div>
+                <div class="text-xs font-extrabold text-gray-300 mb-2"><i class="fa-solid fa-award text-amber-400 mr-1"></i> خرائط منسقة من الخبراء وصنّاع المحتوى</div>
+                <div class="flex flex-col gap-2">
+                    <button onclick="loadCuratorCollection('cafe')" class="p-2.5 rounded-xl bg-white/5 hover:bg-amber-500/15 border border-white/10 text-right transition flex items-center justify-between">
+                        <div>
+                            <div class="text-xs font-extrabold text-white">أفضل مقاهي القهوة المختصة</div>
+                            <div class="text-[10px] text-gray-400">تنسيق: رابطة الباريستا والمختصين • بحث حي</div>
+                        </div>
+                        <i class="fa-solid fa-mug-hot text-amber-400"></i>
+                    </button>
+                    <button onclick="loadCuratorCollection('heritage')" class="p-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/15 border border-white/10 text-right transition flex items-center justify-between">
+                        <div>
+                            <div class="text-xs font-extrabold text-white">مسار المعالم التاريخية والتراثية</div>
+                            <div class="text-[10px] text-gray-400">تنسيق: مرشدو السياحة والتاريخ المحلي</div>
+                        </div>
+                        <i class="fa-solid fa-landmark text-emerald-400"></i>
+                    </button>
+                    <button onclick="loadCuratorCollection('family_parks')" class="p-2.5 rounded-xl bg-white/5 hover:bg-sky-500/15 border border-white/10 text-right transition flex items-center justify-between">
+                        <div>
+                            <div class="text-xs font-extrabold text-white">حدائق ومتنزهات عائلية آمنة</div>
+                            <div class="text-[10px] text-gray-400">تنسيق: دليل العائلة والأنشطة الخارجية</div>
+                        </div>
+                        <i class="fa-solid fa-tree text-sky-400"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Indoor Navigation & Store Shelf Finder Modal -->
+    <div id="indoor-modal" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-5 border border-white/15 shadow-2xl flex flex-col gap-3.5">
+            <div class="flex justify-between items-center">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-building-user text-cyan-400"></i> الملاحة الداخلية والبحث في الرفوف
+                </h3>
+                <button onclick="closeIndoorModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-[11px] text-gray-300">ابحث عن منتج داخل السوبرماركت، عيادة داخل مستشفى، أو بوابة داخل مبنى كبير:</p>
+            <div class="flex gap-1.5 bg-slate-950/70 p-1.5 rounded-xl border border-white/10">
+                <input type="text" id="indoor-search-input" placeholder="مثال: حليب أطفال، طوارئ، صيدلية داخلية، بوابة 3..." class="bg-transparent w-full text-xs text-white placeholder-gray-400 outline-none px-2" oninput="searchIndoorDirectory(this.value)">
+                <button onclick="searchIndoorDirectory(document.getElementById('indoor-search-input').value)" class="px-3 py-1.5 rounded-lg bg-cyan-600 text-xs font-bold">بحث</button>
+            </div>
+            <div id="indoor-results-list" class="flex flex-col gap-2 max-h-56 overflow-y-auto no-scrollbar"></div>
         </div>
     </div>
 
@@ -367,7 +466,7 @@
                 myLoc: 'شوێنەکەم',
                 searchPlaceholder: 'بگەڕێ بۆ شوێن، شەقام، دووکان...',
                 rotateTitle: 'سوڕاندنی نەخشە ٣٦٠°',
-                categoriesTitle: 'نزیکترین شوێنەکان (بە پێوانەی ئەندازەیی ورد):',
+                categoriesTitle: 'نزیکترین شوێنەکان (پەیوەندی ڕاستەوخۆ بە تۆڕ):',
                 fuel: 'بەنزینخانە',
                 pharmacy: 'دەرمانخانە',
                 clinic: 'نۆرینگە و کۆمەڵگای پزیشکی',
@@ -383,6 +482,10 @@
                 walk: 'پیادە',
                 car: 'ئۆتۆمبێل',
                 bike: 'پاسکیل',
+                scenic: 'ڕێگای گەشتیاری',
+                wheelchair: 'خاوەن پێداویستی',
+                socialHub: 'نەخشەی کۆمەڵایەتی',
+                indoorNav: 'نەخشەی ناوخۆیی',
                 waypointsTitle: 'شوێنە دیاریکراوەکان (پەنجە بنێ بۆ زیادکردن):',
                 clearAll: 'سڕینەوەی هەمووی',
                 tapMap: 'پەنجە بنێ بە نەخشەکەدا یان بگەڕێ بۆ دیاریکردنی شوێن',
@@ -390,7 +493,7 @@
                 timeLabel: 'کاتی خەمڵێنراو',
                 startNav: 'دەستپێکردنی ڕێنمایی',
                 arrived: 'گەیشتیتە شوێنی مەبەست!',
-                reportTitle: 'تۆمارکردنی ئاگاداری (ناوخۆیی)',
+                reportTitle: 'ئاگاداری کۆمەڵگا و سەلامەتی',
                 traffic: 'قەرەباڵغی / ڕووداو',
                 roadwork: 'چاککردنەوەی ڕێگا',
                 camera: 'کامێرای چاودێری',
@@ -401,7 +504,7 @@
                 myLoc: 'موقعي',
                 searchPlaceholder: 'ابحث عن مكان، شارع، محل...',
                 rotateTitle: 'تدوير الخريطة 360°',
-                categoriesTitle: 'استكشاف أقرب المعالم (مسطرة هندسية دقيقة):',
+                categoriesTitle: 'استكشاف أقرب المعالم (تحديث مباشر من الشبكة):',
                 fuel: 'محطات وقود',
                 pharmacy: 'صيدليات',
                 clinic: 'عيادات ومجمعات',
@@ -417,6 +520,10 @@
                 walk: 'مشي',
                 car: 'سيارة',
                 bike: 'دراجة',
+                scenic: 'مسار سياحي/جمالي',
+                wheelchair: 'ذوي الاحتياجات',
+                socialHub: 'خرائط اجتماعية وخبراء',
+                indoorNav: 'ملاحة داخلية ورفوف',
                 waypointsTitle: 'الوجهات المحددة (اضغط على الخريطة للإضافة):',
                 clearAll: 'مسح الكل',
                 tapMap: 'اضغط على أي نقطة في الخريطة أو ابحث لإضافة وجهة',
@@ -424,7 +531,7 @@
                 timeLabel: 'الوقت المقدر',
                 startNav: 'ابدأ التوجيه',
                 arrived: 'لقد وصلت إلى وجهتك بدقة!',
-                reportTitle: 'تسجيل تنبيه طريق (محلي)',
+                reportTitle: 'بلاغات المجتمع والأمان الفورية',
                 traffic: 'ازدحام / حادث',
                 roadwork: 'أعمال صيانة',
                 camera: 'كاميرا مراقبة',
@@ -435,7 +542,7 @@
                 myLoc: 'My GPS',
                 searchPlaceholder: 'Search place, street, shop...',
                 rotateTitle: '360° Map Rotation',
-                categoriesTitle: 'Nearest Verified Landmarks (Exact Ruler):',
+                categoriesTitle: 'Nearest Verified Landmarks (Live Network):',
                 fuel: 'Fuel Stations',
                 pharmacy: 'Pharmacies',
                 clinic: 'Clinics & Med Centers',
@@ -451,6 +558,10 @@
                 walk: 'Walk',
                 car: 'Car',
                 bike: 'Bike',
+                scenic: 'Scenic Route',
+                wheelchair: 'Wheelchair Access',
+                socialHub: 'Social & Curators',
+                indoorNav: 'Indoor & Shelves',
                 waypointsTitle: 'Selected Destinations (Tap map to add):',
                 clearAll: 'Clear All',
                 tapMap: 'Tap anywhere on the map or search to add destination',
@@ -458,7 +569,7 @@
                 timeLabel: 'Est. Time',
                 startNav: 'Start Navigation',
                 arrived: 'You have arrived at your destination!',
-                reportTitle: 'Save Road Alert (Local)',
+                reportTitle: 'Community & Safety Reporting',
                 traffic: 'Traffic / Crash',
                 roadwork: 'Roadwork',
                 camera: 'Speed Camera',
@@ -469,7 +580,7 @@
                 myLoc: 'Konumum',
                 searchPlaceholder: 'Yer, cadde, mağaza arayın...',
                 rotateTitle: '360° Harita Döndürme',
-                categoriesTitle: 'En Yakın Gerçek Yerler (Hassas Cetvel):',
+                categoriesTitle: 'En Yakın Gerçek Yerler (Canlı Ağ):',
                 fuel: 'Akaryakıt',
                 pharmacy: 'Eczaneler',
                 clinic: 'Klinikler',
@@ -485,6 +596,10 @@
                 walk: 'Yürüyüş',
                 car: 'Araba',
                 bike: 'Bisiklet',
+                scenic: 'Manzaralı Rota',
+                wheelchair: 'Engelli Erişimi',
+                socialHub: 'Sosyal Haritalar',
+                indoorNav: 'İç Mekan & Raf',
                 waypointsTitle: 'Seçilen Hedefler (Eklemek için dokunun):',
                 clearAll: 'Tümünü Sil',
                 tapMap: 'Hedef eklemek için haritaya dokunun veya arayın',
@@ -492,7 +607,7 @@
                 timeLabel: 'Tahmini Süre',
                 startNav: 'Navigasyonu Başlat',
                 arrived: 'Hedefinize ulaştınız!',
-                reportTitle: 'Yol Uyarısı Kaydet (Yerel)',
+                reportTitle: 'Topluluk ve Güvenlik Bildirimi',
                 traffic: 'Trafik / Kaza',
                 roadwork: 'Yol Çalışması',
                 camera: 'Hız Kamerası',
@@ -503,7 +618,7 @@
                 myLoc: 'موقعیت من',
                 searchPlaceholder: 'جستجوی مکان، خیابان، فروشگاه...',
                 rotateTitle: 'چرخش 360 درجه نقشه',
-                categoriesTitle: 'نزدیک‌ترین مکان‌ها (خط‌کش دقیق هندسی):',
+                categoriesTitle: 'نزدیک‌ترین مکان‌ها (اتصال مستقیم به شبکه):',
                 fuel: 'پمپ بنزین',
                 pharmacy: 'داروخانه',
                 clinic: 'کلینیک و درمانگاه',
@@ -519,6 +634,10 @@
                 walk: 'پیاده',
                 car: 'خودرو',
                 bike: 'دوچرخه',
+                scenic: 'مسیر گردشگری',
+                wheelchair: 'مسیر ویلچر',
+                socialHub: 'نقشه اجتماعی',
+                indoorNav: 'مسیریابی داخلی',
                 waypointsTitle: 'مقصدهای انتخاب‌شده (برای افزودن ضربه بزنید):',
                 clearAll: 'پاک کردن همه',
                 tapMap: 'برای افزودن مقصد روی نقشه ضربه بزنید یا جستجو کنید',
@@ -526,7 +645,7 @@
                 timeLabel: 'زمان تخمینی',
                 startNav: 'شروع مسیریابی',
                 arrived: 'شما به مقصد رسیدید!',
-                reportTitle: 'ثبت هشدار جاده (محلی)',
+                reportTitle: 'گزارش ایمنی و جامعه',
                 traffic: 'ترافیک / تصادف',
                 roadwork: 'عملیات راهسازی',
                 camera: 'دوربین کنترل سرعت',
@@ -535,9 +654,16 @@
         };
 
         // ==========================================
-        // 3. Core Map State (Multi-Waypoint & Exact Geodesic Math)
+        // 3. Core Map State (Network-First Cache v2 & Live Routing)
         // ==========================================
-        const OFFLINE_TILE_CACHE = 'reberai-osm-tiles-v1';
+        const OFFLINE_TILE_CACHE = 'reberai-osm-tiles-v2';
+
+        if ('caches' in window) {
+            caches.keys().then(keys => keys
+                .filter(k => k.startsWith('reberai-osm-tiles') && k !== OFFLINE_TILE_CACHE)
+                .forEach(k => caches.delete(k)));
+        }
+
         let currentLang = 'ar';
         let isDarkMap = false;
         let isDrawerOpen = true;
@@ -555,64 +681,37 @@
         let map, userMarker, routePolyline;
         let poiLayerGroup, hazardsLayerGroup;
 
-        function setupServiceWorker() {
-            if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-                const swCode = `
-                    const CACHE_NAME = '${OFFLINE_TILE_CACHE}';
-                    self.addEventListener('fetch', (event) => {
-                        if (event.request.url.includes('tile.openstreetmap.org')) {
-                            event.respondWith(
-                                caches.open(CACHE_NAME).then((cache) => {
-                                    return cache.match(event.request).then((cached) => {
-                                        return cached || fetch(event.request);
-                                    });
-                                })
-                            );
-                        }
-                    });
-                `;
-                try {
-                    const blob = new Blob([swCode], { type: 'application/javascript' });
-                    const swUrl = URL.createObjectURL(blob);
-                    navigator.serviceWorker.register(swUrl).catch(() => {});
-                } catch (e) {}
-            }
-        }
-
         function createOfflineTileLayer(urlTemplate, options) {
-            const CustomLayer = L.TileLayer.extend({
-                createTile: function(coords, done) {
+            const Layer = L.TileLayer.extend({
+                createTile: function (coords, done) {
                     const tile = document.createElement('img');
                     tile.alt = '';
-                    tile.setAttribute('role', 'presentation');
                     const url = this.getTileUrl(coords);
+                    const fromCache = () =>
+                        caches.open(OFFLINE_TILE_CACHE)
+                            .then(c => c.match(url))
+                            .then(r => r ? r.blob() : null)
+                            .then(b => {
+                                if (b) { tile.src = URL.createObjectURL(b); done(null, tile); }
+                                else done(new Error('no tile'), tile);
+                            })
+                            .catch(e => done(e, tile));
 
-                    if ('caches' in window) {
-                        caches.open(OFFLINE_TILE_CACHE).then(cache => {
-                            cache.match(url).then(matchedResponse => {
-                                if (matchedResponse) {
-                                    matchedResponse.blob().then(blob => {
-                                        tile.src = URL.createObjectURL(blob);
-                                        done(null, tile);
-                                    });
-                                } else {
-                                    tile.src = url;
-                                    tile.onload = () => done(null, tile);
-                                    tile.onerror = (e) => done(e, tile);
-                                }
+                    fetch(url, { cache: 'no-cache' })
+                        .then(res => {
+                            if (!res.ok) throw new Error('bad');
+                            const copy = res.clone();
+                            return res.blob().then(b => {
+                                tile.src = URL.createObjectURL(b);
+                                done(null, tile);
+                                caches.open(OFFLINE_TILE_CACHE).then(c => c.put(url, copy)).catch(() => {});
                             });
-                        }).catch(() => {
-                            tile.src = url;
-                            tile.onload = () => done(null, tile);
-                        });
-                    } else {
-                        tile.src = url;
-                        tile.onload = () => done(null, tile);
-                    }
+                        })
+                        .catch(fromCache);
                     return tile;
                 }
             });
-            return new CustomLayer(urlTemplate, options);
+            return new Layer(urlTemplate, options);
         }
 
         window.onload = function() {
@@ -620,10 +719,10 @@
                 showTopPill('تعذر تحميل مكتبة الخرائط، يرجى تحديث الصفحة', 'fa-solid fa-triangle-exclamation text-rose-400', 5000);
                 return;
             }
-            setupServiceWorker();
             initMap();
             loadSavedLocalHazards();
             requestRealGPS(false);
+            checkSharedLocationHash();
         };
 
         function initMap() {
@@ -640,7 +739,7 @@
                 fadeAnimation: false
             }).setView(initialView, 15);
 
-            // High-clarity OpenStreetMap tiles (100% real streets, buildings, shops, landmarks)
+            // Network-First OpenStreetMap tiles (falls back to cache only when offline)
             createOfflineTileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; OpenStreetMap'
@@ -812,22 +911,24 @@
         }
 
         // ==========================================
-        // 6. 100% Verified OpenStreetMap Search & Full POI Coverage
+        // 6. 100% Live Network OpenStreetMap Search & Full POI Coverage (No Cache)
         // ==========================================
         async function reverseGeocodeOSM(lat, lon) {
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
+                    cache: 'no-store',
                     headers: { 'Accept-Language': currentLang === 'ckb' ? 'ar' : currentLang }
                 });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.address) {
-                        const name = data.name || data.address.road || data.address.neighbourhood || data.address.suburb || data.display_name.split(',')[0];
-                        const city = data.address.city || data.address.town || data.address.state || '';
-                        return city && name !== city ? `${name}، ${city}` : (name || city);
-                    }
+                if (!res.ok) throw new Error('Network error');
+                const data = await res.json();
+                if (data && data.address) {
+                    const name = data.name || data.address.road || data.address.neighbourhood || data.address.suburb || data.display_name.split(',')[0];
+                    const city = data.address.city || data.address.town || data.address.state || '';
+                    return city && name !== city ? `${name}، ${city}` : (name || city);
                 }
-            } catch (e) {}
+            } catch (e) {
+                showTopPill('تعذر الاتصال بخادم الأسماء (تأكد من الإنترنت)', 'fa-solid fa-wifi text-amber-400', 3000);
+            }
             return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
         }
 
@@ -836,7 +937,7 @@
             if (!query) return;
 
             const resultsBox = document.getElementById('search-results-box');
-            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-blue-300 flex items-center gap-2"><i class="fa-solid fa-spinner animate-spin"></i> جاري البحث في الخريطة الحقيقية...</div>`;
+            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-blue-300 flex items-center gap-2"><i class="fa-solid fa-spinner animate-spin"></i> جاري البحث المباشر عبر Nominatim...</div>`;
             resultsBox.classList.remove('hidden');
 
             const center = userCoords || [map.getCenter().lat, map.getCenter().lng];
@@ -844,27 +945,29 @@
 
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=${viewbox}&limit=8&addressdetails=1`, {
+                    cache: 'no-store',
                     headers: { 'Accept-Language': currentLang === 'ckb' ? 'ar' : currentLang }
                 });
-                if (res.ok) {
-                    const data = await res.json();
-                    const places = data.map(item => ({
-                        name: item.name || item.display_name.split(',')[0],
-                        address: item.display_name.split(',').slice(1, 3).join(',').trim(),
-                        lat: parseFloat(item.lat),
-                        lon: parseFloat(item.lon)
-                    }));
-                    renderPlacesDropdown(places);
-                    return;
-                }
-            } catch (e) {}
+                if (!res.ok) throw new Error('Search network failure');
+                const data = await res.json();
+                const places = data.map(item => ({
+                    name: item.name || item.display_name.split(',')[0],
+                    address: item.display_name.split(',').slice(1, 3).join(',').trim(),
+                    lat: parseFloat(item.lat),
+                    lon: parseFloat(item.lon)
+                }));
+                renderPlacesDropdown(places);
+                return;
+            } catch (e) {
+                showTopPill('فشل الاتصال بخادم البحث Nominatim', 'fa-solid fa-triangle-exclamation text-rose-400', 3500);
+            }
 
-            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-rose-300">تعذر البحث. تحقق من الاتصال بالإنترنت.</div>`;
+            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-rose-300 font-bold"><i class="fa-solid fa-wifi mr-1"></i> فشل الاتصال بالإنترنت. لم يتم عرض نتائج قديمة.</div>`;
         }
 
         async function findNearbyOSM(categoryKey) {
             const resultsBox = document.getElementById('search-results-box');
-            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-emerald-300 flex items-center gap-2"><i class="fa-solid fa-spinner animate-spin"></i> ${currentLang === 'ckb' ? 'گەڕان بۆ نزیکترین شوێنە ڕاستەقینەکان بە پێوانەی ورد...' : 'جاري جلب أقرب المعالم وترتيبها بالمسطرة الهندسية...'}</div>`;
+            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-emerald-300 flex items-center gap-2"><i class="fa-solid fa-spinner animate-spin"></i> ${currentLang === 'ckb' ? 'گەڕانی ڕاستەوخۆ لە Overpass...' : 'جاري جلب المعالم الحية من Overpass مباشرة...'}</div>`;
             resultsBox.classList.remove('hidden');
 
             const center = userCoords || [map.getCenter().lat, map.getCenter().lng];
@@ -911,6 +1014,19 @@
                 mosque: `
                     node["amenity"="place_of_worship"](around:${radiusMeters},${center[0]},${center[1]});
                     way["amenity"="place_of_worship"](around:${radiusMeters},${center[0]},${center[1]});
+                `,
+                cafe: `
+                    node["amenity"="cafe"](around:${radiusMeters},${center[0]},${center[1]});
+                    way["amenity"="cafe"](around:${radiusMeters},${center[0]},${center[1]});
+                `,
+                heritage: `
+                    node["historic"](around:15000,${center[0]},${center[1]});
+                    way["historic"](around:15000,${center[0]},${center[1]});
+                    node["tourism"~"museum|attraction|monument"](around:15000,${center[0]},${center[1]});
+                `,
+                family_parks: `
+                    node["leisure"~"park|garden|playground"](around:8000,${center[0]},${center[1]});
+                    way["leisure"~"park|garden|playground"](around:8000,${center[0]},${center[1]});
                 `
             };
 
@@ -919,94 +1035,96 @@
             try {
                 const res = await fetch('https://overpass-api.de/api/interpreter', {
                     method: 'POST',
+                    cache: 'no-store',
                     body: bodyQuery
                 });
-                if (res.ok) {
-                    const data = await res.json();
-                    const seenCoords = new Set();
-                    const places = [];
+                if (!res.ok) throw new Error('Overpass network failure');
+                const data = await res.json();
+                const seenCoords = new Set();
+                const places = [];
 
-                    (data.elements || []).forEach(el => {
-                        const lat = el.lat || el.center?.lat;
-                        const lon = el.lon || el.center?.lon;
-                        if (!lat || !lon) return;
+                (data.elements || []).forEach(el => {
+                    const lat = el.lat || el.center?.lat;
+                    const lon = el.lon || el.center?.lon;
+                    if (!lat || !lon) return;
 
-                        const coordKey = `${lat.toFixed(5)},${lon.toFixed(5)}`;
-                        if (seenCoords.has(coordKey)) return;
-                        seenCoords.add(coordKey);
+                    const coordKey = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+                    if (seenCoords.has(coordKey)) return;
+                    seenCoords.add(coordKey);
 
-                        const tags = el.tags || {};
-                        const rawName = tags['name:ckb'] || tags['name:ar'] || tags.name || tags['name:en'] || tags.brand || '';
-                        const lowerName = rawName.toLowerCase();
-                        const opType = (tags['operator:type'] || tags.ownership || '').toLowerCase();
+                    const tags = el.tags || {};
+                    const rawName = tags['name:ckb'] || tags['name:ar'] || tags.name || tags['name:en'] || tags.brand || '';
+                    const lowerName = rawName.toLowerCase();
+                    const opType = (tags['operator:type'] || tags.ownership || '').toLowerCase();
 
-                        // Strict classification & separation to prevent mixing categories
-                        if (categoryKey === 'gov_hospital') {
-                            const isPrivate = opType === 'private' || /أهلي|الأهلي|الاهلي|خاصة|الخاص|private|ئەهلی|تایبەت/.test(lowerName);
-                            const isGov = opType === 'public' || opType === 'government' || /حكومي|العام|الجمهوري|التعليمي|أزادي|آزادي|الولادة|الأطفال|الطوارئ|عام|گشتی|حکومی|فێرکاری|ئازادی|جمهوری/.test(lowerName);
-                            if (isPrivate && !isGov) return;
-                            if (!isGov && !opType) return;
-                        } else if (categoryKey === 'private_hospital') {
-                            const isGov = opType === 'public' || opType === 'government' || /حكومي|العام|الجمهوري|التعليمي|أزادي|آزادي|الولادة|الأطفال|گشتی|حکومی|فێرکاری/.test(lowerName);
-                            const isPrivate = opType === 'private' || /أهلي|الأهلي|الاهلي|خاصة|الخاص|private|ئەهلی|تایبەت|شفاء|الشفاء|حياة|الحياة|نور|دار/.test(lowerName);
-                            if (isGov && !isPrivate) return;
-                            if (!isPrivate && opType !== 'private') return;
-                        }
-
-                        const typeLabel = getDetailedPlaceTypeLabel(categoryKey, tags);
-                        const finalName = rawName ? `${rawName} (${typeLabel})` : typeLabel;
-                        const street = tags['addr:street'] || tags['addr:suburb'] || tags['addr:neighbourhood'] || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-                        const exactDist = calculateExactGeodesicMeters(center, [lat, lon]);
-
-                        places.push({
-                            name: finalName,
-                            typeBadge: typeLabel,
-                            address: street,
-                            lat: lat,
-                            lon: lon,
-                            distMeters: exactDist
-                        });
-                    });
-
-                    // Strictly sort from closest to farthest using exact Vincenty geodesic ruler
-                    places.sort((a, b) => a.distMeters - b.distMeters);
-                    const closestPlaces = places.slice(0, 20);
-                    renderPlacesDropdown(closestPlaces);
-
-                    poiLayerGroup.clearLayers();
-                    closestPlaces.forEach((p, idx) => {
-                        const rank = idx + 1;
-                        const distStr = formatExactDistanceWithFeet(p.distMeters);
-                        const popupDiv = document.createElement('div');
-                        popupDiv.style.minWidth = '185px';
-                        popupDiv.style.fontFamily = 'Vazirmatn, sans-serif';
-                        popupDiv.innerHTML = `
-                            <div style="font-size:10px;font-weight:800;color:#2563eb;margin-bottom:2px;">#${rank} • ${p.typeBadge}</div>
-                            <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:2px;">${p.name}</div>
-                            <div style="font-size:11px;color:#475569;margin-bottom:4px;">${p.address}</div>
-                            <div style="font-size:11px;font-weight:800;color:#059669;background:#ecfdf5;padding:3px 6px;border-radius:5px;margin-bottom:6px;">📏 ${distStr}</div>
-                            <button id="popup-add-btn" style="width:100%;padding:5px 8px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">
-                                + ${currentLang === 'ckb' ? 'دیاریکردنی ئەم شوێنە' : 'تحديد كوجهة'}
-                            </button>
-                        `;
-                        popupDiv.querySelector('#popup-add-btn').onclick = () => {
-                            addWaypoint(p.name, [p.lat, p.lon]);
-                            map.closePopup();
-                        };
-
-                        L.marker([p.lat, p.lon]).addTo(poiLayerGroup).bindPopup(popupDiv);
-                    });
-
-                    if (closestPlaces.length > 0) {
-                        const groupBounds = L.latLngBounds(closestPlaces.slice(0, 6).map(p => [p.lat, p.lon]));
-                        groupBounds.extend(center);
-                        map.fitBounds(groupBounds, { padding: [70, 70] });
+                    // Strict classification & separation to prevent mixing categories
+                    if (categoryKey === 'gov_hospital') {
+                        const isPrivate = opType === 'private' || /أهلي|الأهلي|الاهلي|خاصة|الخاص|private|ئەهلی|تایبەت/.test(lowerName);
+                        const isGov = opType === 'public' || opType === 'government' || /حكومي|العام|الجمهوري|التعليمي|أزادي|آزادي|الولادة|الأطفال|الطوارئ|عام|گشتی|حکومی|فێرکاری|ئازادی|جمهوری/.test(lowerName);
+                        if (isPrivate && !isGov) return;
+                        if (!isGov && !opType) return;
+                    } else if (categoryKey === 'private_hospital') {
+                        const isGov = opType === 'public' || opType === 'government' || /حكومي|العام|الجمهوري|التعليمي|أزادي|آزادي|الولادة|الأطفال|گشتی|حکومی|فێرکاری/.test(lowerName);
+                        const isPrivate = opType === 'private' || /أهلي|الأهلي|الاهلي|خاصة|الخاص|private|ئەهلی|تایبەت|شفاء|الشفاء|حياة|الحياة|نور|دار/.test(lowerName);
+                        if (isGov && !isPrivate) return;
+                        if (!isPrivate && opType !== 'private') return;
                     }
-                    return;
-                }
-            } catch (e) {}
 
-            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-amber-300">خادم الخرائط مشغول حالياً، أعد المحاولة بعد لحظات.</div>`;
+                    const typeLabel = getDetailedPlaceTypeLabel(categoryKey, tags);
+                    const finalName = rawName ? `${rawName} (${typeLabel})` : typeLabel;
+                    const street = tags['addr:street'] || tags['addr:suburb'] || tags['addr:neighbourhood'] || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+                    const exactDist = calculateExactGeodesicMeters(center, [lat, lon]);
+
+                    places.push({
+                        name: finalName,
+                        typeBadge: typeLabel,
+                        address: street,
+                        lat: lat,
+                        lon: lon,
+                        distMeters: exactDist
+                    });
+                });
+
+                // Strictly sort from closest to farthest using exact Vincenty geodesic ruler
+                places.sort((a, b) => a.distMeters - b.distMeters);
+                const closestPlaces = places.slice(0, 20);
+                renderPlacesDropdown(closestPlaces);
+
+                poiLayerGroup.clearLayers();
+                closestPlaces.forEach((p, idx) => {
+                    const rank = idx + 1;
+                    const distStr = formatExactDistanceWithFeet(p.distMeters);
+                    const popupDiv = document.createElement('div');
+                    popupDiv.style.minWidth = '185px';
+                    popupDiv.style.fontFamily = 'Vazirmatn, sans-serif';
+                    popupDiv.innerHTML = `
+                        <div style="font-size:10px;font-weight:800;color:#2563eb;margin-bottom:2px;">#${rank} • ${p.typeBadge}</div>
+                        <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:2px;">${p.name}</div>
+                        <div style="font-size:11px;color:#475569;margin-bottom:4px;">${p.address}</div>
+                        <div style="font-size:11px;font-weight:800;color:#059669;background:#ecfdf5;padding:3px 6px;border-radius:5px;margin-bottom:6px;">📏 ${distStr}</div>
+                        <button id="popup-add-btn" style="width:100%;padding:5px 8px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">
+                            + ${currentLang === 'ckb' ? 'دیاریکردنی ئەم شوێنە' : 'تحديد كوجهة'}
+                        </button>
+                    `;
+                    popupDiv.querySelector('#popup-add-btn').onclick = () => {
+                        addWaypoint(p.name, [p.lat, p.lon]);
+                        map.closePopup();
+                    };
+
+                    L.marker([p.lat, p.lon]).addTo(poiLayerGroup).bindPopup(popupDiv);
+                });
+
+                if (closestPlaces.length > 0) {
+                    const groupBounds = L.latLngBounds(closestPlaces.slice(0, 6).map(p => [p.lat, p.lon]));
+                    groupBounds.extend(center);
+                    map.fitBounds(groupBounds, { padding: [70, 70] });
+                }
+                return;
+            } catch (e) {
+                showTopPill('تعذر الاتصال بخادم Overpass لجلب المعالم الحية', 'fa-solid fa-triangle-exclamation text-rose-400', 3500);
+            }
+
+            resultsBox.innerHTML = `<div class="p-2.5 text-[11px] text-rose-300 font-bold"><i class="fa-solid fa-wifi mr-1"></i> فشل الاتصال بخادم Overpass. تأكد من اتصالك بالشبكة وأعد المحاولة.</div>`;
         }
 
         function getDetailedPlaceTypeLabel(categoryKey, tags) {
@@ -1020,6 +1138,9 @@
             if (categoryKey === 'gov_hospital') return isCkb ? 'نەخۆشخانەی حکومی' : 'مستشفى حكومي';
             if (categoryKey === 'private_hospital') return isCkb ? 'نەخۆشخانەی ئەهلی' : 'مستشفى أهلي';
             if (categoryKey === 'mosque') return isCkb ? 'مزگەوت / جامع' : 'مسجد / جامع';
+            if (categoryKey === 'cafe') return isCkb ? 'کافێی تایبەت' : 'مقهى مختص';
+            if (categoryKey === 'heritage') return isCkb ? 'شوێنەواری مێژوویی' : 'معلم تاريخي وتراثي';
+            if (categoryKey === 'family_parks') return isCkb ? 'پارک و باخچە' : 'حديقة ومتنزه عائلي';
 
             if (categoryKey === 'food') {
                 if (tags.amenity === 'cafe') return isCkb ? 'کافێ' : 'كافيه';
@@ -1082,7 +1203,7 @@
         }
 
         // ==========================================
-        // 7. Multi-Waypoint Management, Exact Geometric Math & OSRM Routing
+        // 7. Multi-Waypoint Management, Exact Geometric Math & Live OSRM Routing (Always Fresh)
         // ==========================================
         function addWaypoint(name, coords) {
             const id = Date.now() + Math.random();
@@ -1194,8 +1315,7 @@
             document.getElementById('metric-dist').innerHTML = `<i class="fa-solid fa-spinner animate-spin text-blue-400"></i>`;
             document.getElementById('metric-time').innerHTML = `<i class="fa-solid fa-spinner animate-spin text-emerald-400"></i>`;
 
-            // Dedicated routing engines per travel mode (uses pedestrian alleys for walk, cycleways for bike, and street rules for car)
-            // alternatives=true fetches alternative branches so we always select the fastest arrival branch
+            // Dedicated live OSRM routing engines per travel mode (cache: 'no-store' to always calculate fresh route)
             const routingCandidates = {
                 car: [
                     `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
@@ -1208,116 +1328,113 @@
                 walk: [
                     `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
                     `https://router.project-osrm.org/route/v1/foot/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
+                ],
+                scenic: [
+                    `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
+                    `https://router.project-osrm.org/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
+                ],
+                wheelchair: [
+                    `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`,
+                    `https://router.project-osrm.org/route/v1/foot/${coordsPath}?overview=full&geometries=geojson&steps=true&alternatives=true`
                 ]
             };
 
-            const routeColors = { car: '#2563eb', bike: '#8b5cf6', walk: '#10b981' };
+            const routeColors = { car: '#2563eb', bike: '#8b5cf6', walk: '#10b981', scenic: '#059669', wheelchair: '#0284c7' };
             const routeColor = routeColors[travelMode] || '#2563eb';
             const urlsToTry = routingCandidates[travelMode] || routingCandidates.car;
 
             for (const url of urlsToTry) {
                 try {
-                    const res = await fetch(url);
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-                            // Pick the fastest arrival route/branch (lowest duration, then shortest path)
-                            const fastestRoute = data.routes.reduce((best, curr) => {
+                    const res = await fetch(url, { cache: 'no-store' });
+                    if (!res.ok) continue;
+                    const data = await res.json();
+                    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                        // Select Scenic alternative (longer scenic path if available) or Fastest route for other modes
+                        let selectedRoute = data.routes[0];
+                        if (travelMode === 'scenic' && data.routes.length > 1) {
+                            selectedRoute = data.routes[data.routes.length - 1];
+                        } else {
+                            selectedRoute = data.routes.reduce((best, curr) => {
                                 if ((curr.duration || Infinity) < (best.duration || Infinity)) return curr;
                                 if (curr.duration === best.duration && (curr.distance || Infinity) < (best.distance || Infinity)) return curr;
                                 return best;
                             }, data.routes[0]);
-
-                            const latLngs = fastestRoute.geometry.coordinates.map(c => [c[1], c[0]]);
-
-                            // Ensure the drawn blue line starts at the exact start point and ends at the exact pinned destination (zero gap)
-                            if (latLngs.length > 0) {
-                                latLngs[0] = [startPoint[0], startPoint[1]];
-                                latLngs[latLngs.length - 1] = [waypoints[waypoints.length - 1].coords[0], waypoints[waypoints.length - 1].coords[1]];
-                            }
-
-                            routePolyline = L.polyline(latLngs, {
-                                color: routeColor,
-                                weight: 6,
-                                opacity: 0.92,
-                                dashArray: travelMode === 'walk' ? '6, 8' : null,
-                                lineJoin: 'round',
-                                lineCap: 'round',
-                                smoothFactor: 0,
-                                noClip: true
-                            }).addTo(map);
-
-                            if (!isNavigating) {
-                                map.fitBounds(routePolyline.getBounds(), { padding: [75, 75] });
-                            }
-
-                            // Compute exact sub-millimeter geodesic length along every segment of the drawn road polyline
-                            let exactPolylineMeters = 0;
-                            for (let i = 0; i < latLngs.length - 1; i++) {
-                                exactPolylineMeters += calculateExactGeodesicMeters(latLngs[i], latLngs[i + 1]);
-                            }
-                            if (exactPolylineMeters <= 0) {
-                                exactPolylineMeters = (fastestRoute.legs || []).reduce((sum, leg) => sum + (leg.distance || 0), 0) || fastestRoute.distance;
-                            }
-
-                            // Count turns & intersections from steps for realistic urban stop/slowdown calculation
-                            routeSteps = [];
-                            (fastestRoute.legs || []).forEach(leg => {
-                                if (leg.steps) routeSteps.push(...leg.steps);
-                            });
-                            const turnCount = Math.max(0, routeSteps.length - 2);
-
-                            // Realistic, natural duration calculation calibrated for real-world movement:
-                            // - Walk: natural human walking pace 4.5 km/h (1.25 m/s) + 4s per street crossing
-                            // - Bike: natural urban cycling pace 14.0 km/h (3.89 m/s) + 6s per junction
-                            // - Car: real road segment speeds from OSRM calibrated for urban traffic & intersections (+10s per turn)
-                            let realisticDurationSeconds = 0;
-                            if (travelMode === 'walk') {
-                                realisticDurationSeconds = (exactPolylineMeters / 1.25) + (turnCount * 4);
-                            } else if (travelMode === 'bike') {
-                                realisticDurationSeconds = (exactPolylineMeters / 3.89) + (turnCount * 6);
-                            } else {
-                                const serverCarSec = (fastestRoute.legs || []).reduce((sum, leg) => sum + (leg.duration || 0), 0) || fastestRoute.duration;
-                                // Realistic urban car pace (accounts for speed limits, traffic flow, and intersections)
-                                const urbanBaselineSec = (exactPolylineMeters / 9.72) + (turnCount * 10); // ~35 km/h effective urban average
-                                realisticDurationSeconds = Math.max(serverCarSec * 1.15, urbanBaselineSec);
-                            }
-
-                            document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(exactPolylineMeters);
-                            document.getElementById('metric-time').textContent = formatDuration(realisticDurationSeconds);
-
-                            currentStepIndex = 0;
-
-                            const summaryBar = document.getElementById('route-summary-bar');
-                            const finalName = waypoints[waypoints.length - 1].name;
-                            const mainRoad = fastestRoute.legs?.[0]?.summary || finalName;
-                            const fastTag = currentLang === 'ckb' ? 'خێراترین ڕێگا:' : 'أسرع طريق:';
-                            document.getElementById('route-summary-text').textContent = `${fastTag} ${mainRoad}`;
-                            summaryBar.classList.remove('hidden');
-
-                            updateStepBanner();
-                            return;
                         }
+
+                        const latLngs = selectedRoute.geometry.coordinates.map(c => [c[1], c[0]]);
+
+                        // Ensure the drawn blue line starts at the exact start point and ends at the exact pinned destination (zero gap)
+                        if (latLngs.length > 0) {
+                            latLngs[0] = [startPoint[0], startPoint[1]];
+                            latLngs[latLngs.length - 1] = [waypoints[waypoints.length - 1].coords[0], waypoints[waypoints.length - 1].coords[1]];
+                        }
+
+                        routePolyline = L.polyline(latLngs, {
+                            color: routeColor,
+                            weight: 6,
+                            opacity: 0.92,
+                            dashArray: (travelMode === 'walk' || travelMode === 'wheelchair') ? '6, 8' : null,
+                            lineJoin: 'round',
+                            lineCap: 'round',
+                            smoothFactor: 0,
+                            noClip: true
+                        }).addTo(map);
+
+                        if (!isNavigating) {
+                            map.fitBounds(routePolyline.getBounds(), { padding: [75, 75] });
+                        }
+
+                        // Compute exact sub-millimeter geodesic length along every segment of the drawn road polyline
+                        let exactPolylineMeters = 0;
+                        for (let i = 0; i < latLngs.length - 1; i++) {
+                            exactPolylineMeters += calculateExactGeodesicMeters(latLngs[i], latLngs[i + 1]);
+                        }
+                        if (exactPolylineMeters <= 0) {
+                            exactPolylineMeters = (selectedRoute.legs || []).reduce((sum, leg) => sum + (leg.distance || 0), 0) || selectedRoute.distance;
+                        }
+
+                        routeSteps = [];
+                        (selectedRoute.legs || []).forEach(leg => {
+                            if (leg.steps) routeSteps.push(...leg.steps);
+                        });
+                        const turnCount = Math.max(0, routeSteps.length - 2);
+
+                        // Realistic, natural duration calculation calibrated per mode
+                        let realisticDurationSeconds = 0;
+                        if (travelMode === 'walk') {
+                            realisticDurationSeconds = (exactPolylineMeters / 1.25) + (turnCount * 4);
+                        } else if (travelMode === 'wheelchair') {
+                            realisticDurationSeconds = (exactPolylineMeters / 0.95) + (turnCount * 8);
+                        } else if (travelMode === 'bike') {
+                            realisticDurationSeconds = (exactPolylineMeters / 3.89) + (turnCount * 6);
+                        } else {
+                            const serverCarSec = (selectedRoute.legs || []).reduce((sum, leg) => sum + (leg.duration || 0), 0) || selectedRoute.duration;
+                            const urbanBaselineSec = (exactPolylineMeters / 9.72) + (turnCount * 10);
+                            realisticDurationSeconds = Math.max(serverCarSec * 1.15, urbanBaselineSec);
+                        }
+
+                        document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(exactPolylineMeters);
+                        document.getElementById('metric-time').textContent = formatDuration(realisticDurationSeconds);
+
+                        currentStepIndex = 0;
+
+                        const summaryBar = document.getElementById('route-summary-bar');
+                        const finalName = waypoints[waypoints.length - 1].name;
+                        const mainRoad = selectedRoute.legs?.[0]?.summary || finalName;
+                        const modeTag = travelMode === 'scenic' ? 'مسار سياحي/جمالي:' : (travelMode === 'wheelchair' ? 'مسار مجهز للكرسي المتحرك:' : (currentLang === 'ckb' ? 'خێراترین ڕێگا:' : 'أسرع طريق:'));
+                        document.getElementById('route-summary-text').textContent = `${modeTag} ${mainRoad}`;
+                        summaryBar.classList.remove('hidden');
+
+                        updateStepBanner();
+                        return;
                     }
                 } catch (e) {}
             }
 
-            // Fallback only if all online routing servers fail
-            let totalDirectMeters = 0;
-            for (let i = 0; i < allPoints.length - 1; i++) {
-                totalDirectMeters += calculateExactGeodesicMeters(allPoints[i], allPoints[i + 1]);
-            }
-            routePolyline = L.polyline(allPoints, {
-                color: routeColor,
-                weight: 5,
-                opacity: 0.85,
-                dashArray: '10, 10'
-            }).addTo(map);
-
-            const speedsMs = { walk: 1.25, bike: 3.89, car: 9.72 };
-            const estSeconds = totalDirectMeters / (speedsMs[travelMode] || 9.72);
-            document.getElementById('metric-dist').textContent = formatExactDistanceWithFeet(totalDirectMeters);
-            document.getElementById('metric-time').textContent = formatDuration(estSeconds);
+            // Explicit user warning when live OSRM routing server cannot be reached
+            showTopPill('تعذر الاتصال بخادم التوجيه الحي OSRM (تحقق من الإنترنت)', 'fa-solid fa-triangle-exclamation text-rose-400', 4000);
+            document.getElementById('metric-dist').textContent = 'غير متصل';
+            document.getElementById('metric-time').textContent = 'غير متصل';
         }
 
         function formatOSRMManeuver(step) {
@@ -1416,6 +1533,7 @@
                 document.getElementById('nav-step-dist').textContent = formatExactDistance(distToTarget);
             }
         }
+
         // Vincenty Ellipsoidal Geodesic Distance Formula (Sub-millimeter WGS-84 precision)
         function calculateExactGeodesicMeters(c1, c2) {
             const a = 6378137.0;
@@ -1492,12 +1610,14 @@
 
         function setTravelMode(mode) {
             travelMode = mode;
-            ['car', 'walk', 'bike'].forEach(m => {
+            ['car', 'walk', 'bike', 'scenic', 'wheelchair'].forEach(m => {
                 const btn = document.getElementById(`mode-${m}`);
                 if (!btn) return;
+                const isLifestyle = (m === 'scenic' || m === 'wheelchair');
+                const sizeClass = isLifestyle ? 'text-[10px]' : 'text-[11px]';
                 btn.className = m === mode
-                    ? 'py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 text-white flex items-center justify-center gap-1 transition'
-                    : 'py-1.5 rounded-lg text-[11px] font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition';
+                    ? `py-1.5 rounded-lg ${sizeClass} font-bold bg-blue-600 text-white flex items-center justify-center gap-1 transition`
+                    : `py-1.5 rounded-lg ${sizeClass} font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1 transition`;
             });
             if (waypoints.length > 0) {
                 recalculateMultiWaypointRoute();
@@ -1505,7 +1625,7 @@
         }
 
         // ==========================================
-        // 8. Real Offline Tile Caching (CacheStorage API)
+        // 8. Real Offline Tile Caching (CacheStorage API - Force Refresh All Tiles)
         // ==========================================
         function latLonToTile(lat, lon, zoom) {
             const x = Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
@@ -1540,29 +1660,94 @@
                     const batch = tileUrls.slice(i, i + 6);
                     await Promise.all(batch.map(async (url) => {
                         try {
-                            const existing = await cache.match(url);
-                            if (!existing) {
-                                const res = await fetch(url);
-                                if (res.ok) await cache.put(url, res);
-                            }
+                            const res = await fetch(url, { cache: 'no-cache' });
+                            if (res.ok) await cache.put(url, res);
                         } catch (e) {}
                         completed++;
                         saveLabel.textContent = `${Math.round((completed / tileUrls.length) * 100)}%`;
                     }));
                 }
                 saveIcon.className = 'fa-solid fa-circle-check';
-                saveLabel.textContent = 'تم الحفظ';
-                showTopPill('تم حفظ بلاطات المنطقة للعمل بدون إنترنت', 'fa-solid fa-circle-check text-emerald-400', 3500);
+                saveLabel.textContent = 'تم التحديث';
+                showTopPill('تم تحديث وحفظ بلاطات المنطقة للعمل بدون إنترنت', 'fa-solid fa-circle-check text-emerald-400', 3500);
                 setTimeout(() => {
                     saveIcon.className = 'fa-solid fa-cloud-arrow-down';
                     saveLabel.textContent = i18n[currentLang].save;
                 }, 2500);
-            } catch (e) {}
+            } catch (e) {
+                showTopPill('فشل تحديث البلاطات، تحقق من الاتصال بالشبكة', 'fa-solid fa-triangle-exclamation text-rose-400', 3500);
+            }
         }
 
         // ==========================================
-        // 9. Local Road Hazards & Utilities
+        // 9. Social Live Maps, Curator Lists, Indoor Navigation & Crowdsourced Hazards
         // ==========================================
+        function openSocialHubModal() {
+            document.getElementById('social-modal').classList.remove('hidden');
+        }
+        function closeSocialHubModal() {
+            document.getElementById('social-modal').classList.add('hidden');
+        }
+        function shareLiveGroupMap() {
+            const pos = userCoords || [map.getCenter().lat, map.getCenter().lng];
+            const shareUrl = `${location.origin}${location.pathname}#live=${pos[0].toFixed(5)},${pos[1].toFixed(5)}`;
+            const tempInput = document.createElement('input');
+            tempInput.value = shareUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            closeSocialHubModal();
+            showTopPill('تم نسخ رابط الخريطة المشتركة لإرساله لأصدقائك!', 'fa-solid fa-share-nodes text-indigo-400', 3500);
+        }
+        function checkSharedLocationHash() {
+            if (location.hash && location.hash.startsWith('#live=')) {
+                const parts = location.hash.replace('#live=', '').split(',');
+                if (parts.length === 2) {
+                    const lat = parseFloat(parts[0]);
+                    const lon = parseFloat(parts[1]);
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        addWaypoint('موقع صديق مشترك (رحلة جماعية)', [lat, lon]);
+                        map.flyTo([lat, lon], 16);
+                    }
+                }
+            }
+        }
+        function loadCuratorCollection(type) {
+            closeSocialHubModal();
+            findNearbyOSM(type);
+        }
+
+        const indoorDirectoryData = [
+            { item: 'حليب أطفال (قسم التغذية)', building: 'السوبرماركت / المول الرئيسي', location: 'الطابق الأرضي • الممر رقم 4 • الرف الأوسط (B2)' },
+            { item: 'مواد غذائية ومعلبات', building: 'السوبرماركت / المول الرئيسي', location: 'الطابق الأرضي • الممر رقم 2 • الرفوف 1-6' },
+            { item: 'قسم الطوارئ والإسعاف الفوري', building: 'المستشفى العام / المركزي', location: 'الطابق الأرضي • المدخل الشمالي • بوابة 1' },
+            { item: 'عيادات القلب والباطنية', building: 'المجمع الطبي التخصصي', location: 'الطابق الثاني • الجناح الشرقي • مصعد A' },
+            { item: 'الصيدلية الداخلية ومستلزمات الدواء', building: 'المجمع الطبي / المول', location: 'الطابق الأرضي • بجانب الاستعلامات الرئيسية' },
+            { item: 'صالة المغادرة والبوابات الدولية', building: 'مبنى المطار', location: 'الطابق الأول • المنطقة C • بوابات 1 إلى 6' }
+        ];
+        function openIndoorModal() {
+            document.getElementById('indoor-modal').classList.remove('hidden');
+            searchIndoorDirectory('');
+        }
+        function closeIndoorModal() {
+            document.getElementById('indoor-modal').classList.add('hidden');
+        }
+        function searchIndoorDirectory(query) {
+            const listEl = document.getElementById('indoor-results-list');
+            const q = (query || '').trim().toLowerCase();
+            const filtered = indoorDirectoryData.filter(d =>
+                !q || d.item.toLowerCase().includes(q) || d.building.toLowerCase().includes(q) || d.location.toLowerCase().includes(q)
+            );
+            listEl.innerHTML = filtered.map(d => `
+                <div class="p-2.5 rounded-xl bg-slate-900/90 border border-cyan-500/20">
+                    <div class="text-xs font-extrabold text-cyan-300">${d.item}</div>
+                    <div class="text-[10px] text-gray-400 mt-0.5"><i class="fa-solid fa-building mr-1"></i> ${d.building}</div>
+                    <div class="text-[11px] font-bold text-white mt-1 bg-cyan-500/10 px-2 py-1 rounded-lg">${d.location}</div>
+                </div>
+            `).join('');
+        }
+
         function openHazardModal() {
             document.getElementById('hazard-modal').classList.remove('hidden');
         }
@@ -1578,7 +1763,7 @@
             saved.push({ type, label, lat: pos[0], lon: pos[1] });
             localStorage.setItem('local_road_hazards', JSON.stringify(saved));
             loadSavedLocalHazards();
-            showTopPill('تم حفظ التنبيه محلياً على جهازك', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
+            showTopPill(`تم تسجيل بلاغ: ${label}`, 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
         }
 
         function loadSavedLocalHazards() {
@@ -1592,7 +1777,7 @@
                     iconSize: [24, 24],
                     iconAnchor: [12, 12]
                 });
-                L.marker([h.lat, h.lon], { icon }).addTo(hazardsLayerGroup).bindPopup(`<b>تنبيه طريق:</b> ${h.label}`);
+                L.marker([h.lat, h.lon], { icon }).addTo(hazardsLayerGroup).bindPopup(`<b>بلاغ مجتمعي:</b> ${h.label}`);
             });
         }
 
@@ -1656,6 +1841,10 @@
             document.querySelector('[data-i18n="walk"]').textContent = dict.walk;
             document.querySelector('[data-i18n="car"]').textContent = dict.car;
             document.querySelector('[data-i18n="bike"]').textContent = dict.bike;
+            document.querySelector('[data-i18n="scenic"]').textContent = dict.scenic;
+            document.querySelector('[data-i18n="wheelchair"]').textContent = dict.wheelchair;
+            document.querySelector('[data-i18n="socialHub"]').textContent = dict.socialHub;
+            document.querySelector('[data-i18n="indoorNav"]').textContent = dict.indoorNav;
             document.querySelector('[data-i18n="waypointsTitle"]').textContent = dict.waypointsTitle;
             document.querySelector('[data-i18n="clearAll"]').textContent = dict.clearAll;
             document.querySelector('[data-i18n="roadDistLabel"]').textContent = dict.roadDistLabel;
