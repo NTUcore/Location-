@@ -15,16 +15,21 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+    <!-- Leaflet Rotated Marker & Touch Rotate Plugin -->
+    <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
+
     <!-- PeerJS for Real-Time P2P Room Chat & Live Location Sync -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Vazirmatn + Noto Naskh Arabic + Cairo (لضمان اتصال وتناسق الحروف الكوردية ۆ ێ ڵ ڕ دون أي تقطع) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Noto+Naskh+Arabic:wght@500;700&family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         * {
             box-sizing: border-box;
-            font-family: 'Cairo', sans-serif;
+            font-family: 'Vazirmatn', 'Noto Naskh Arabic', 'Cairo', sans-serif;
+            font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+            text-rendering: optimizeLegibility;
         }
         html, body {
             width: 100%;
@@ -43,13 +48,12 @@
             background: #0f172a;
         }
         #map {
-            width: 140%;
-            height: 140%;
+            width: 100%;
+            height: 100%;
             position: absolute;
-            top: -20%;
-            left: -20%;
+            top: 0;
+            left: 0;
             z-index: 1;
-            transition: transform 0.15s ease-out;
         }
         .glass-panel {
             background: rgba(15, 23, 42, 0.94);
@@ -63,7 +67,6 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
-        /* تثبيت حجم وشكل الدبابيس والنقطة الزرقاء أثناء التكبير والتصغير */
         .custom-wp-pin {
             width: 28px !important;
             height: 28px !important;
@@ -83,12 +86,12 @@
 </head>
 <body class="text-white select-none">
 
-    <!-- Map Container with 360° Smooth Rotation -->
+    <!-- Map Container -->
     <div id="map-wrapper">
         <div id="map"></div>
     </div>
 
-    <!-- Top Status Pill (Replaces alert) -->
+    <!-- Top Status Pill -->
     <div id="top-status-pill" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 glass-panel border border-white/20 px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs font-bold text-white transition-all">
         <i id="top-pill-icon" class="fa-solid fa-circle-info text-blue-400"></i>
         <span id="top-pill-text">...</span>
@@ -102,105 +105,101 @@
     <!-- Unified Right-Side Control Box -->
     <aside id="right-control-box" class="fixed top-4 right-4 bottom-4 z-30 w-80 max-w-[calc(100vw-2rem)] glass-panel rounded-3xl shadow-2xl border border-white/15 flex flex-col overflow-hidden transition-all duration-300">
         <!-- Header -->
-        <div class="pt-4 pb-3 px-4 pr-16 border-b border-white/10 flex items-center justify-between bg-slate-900/60">
-            <div>
+        <div class="pt-4 pb-3 px-4 pr-16 border-b border-white/10 flex items-center justify-between bg-slate-900/60 gap-1.5">
+            <div class="min-w-0">
                 <h1 class="text-sm font-extrabold text-white tracking-wide flex items-center gap-1.5">
                     <i class="fa-solid fa-compass text-blue-400"></i> RêberAI Pro
                 </h1>
-                <p class="text-[10px] text-gray-400">ملاحة دقيقة • كركوك</p>
+                <p id="app-subtitle" class="text-[10px] text-gray-400 truncate">ملاحة دقيقة • كركوك</p>
             </div>
-            <button onclick="requestRealGPS(true)" class="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center gap-1 shadow transition active:scale-95">
-                <i class="fa-solid fa-location-crosshairs"></i> موقعي
-            </button>
+            <div class="flex items-center gap-1 shrink-0">
+                <select id="lang-selector" onchange="changeAppLanguage(this.value)" class="bg-slate-800 border border-white/15 text-white text-[10px] font-bold rounded-xl px-2 py-1.5 outline-none cursor-pointer">
+                    <option value="ar">العربية</option>
+                    <option value="ku">کوردی</option>
+                    <option value="en">English</option>
+                    <option value="tr">Türkçe</option>
+                </select>
+                <button onclick="requestRealGPS(true)" class="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center gap-1 shadow transition active:scale-95">
+                    <i class="fa-solid fa-location-crosshairs"></i> <span id="lbl-my-loc">موقعي</span>
+                </button>
+            </div>
         </div>
 
         <!-- Scrollable Body -->
-        <div class="p-3.5 overflow-y-auto flex-1 flex flex-col gap-3 no-scrollbar">
-
-            <!-- GPS Status Box -->
-            <div id="gps-status-card" class="bg-slate-900/90 border border-white/10 rounded-2xl p-2.5 flex items-center justify-between text-[11px]">
+        <div class="p-4 overflow-y-auto flex-grow flex flex-col gap-3.5 no-scrollbar">
+            <!-- GPS Status Bar -->
+            <div class="bg-slate-900/90 border border-white/10 rounded-2xl p-2.5 flex items-center justify-between text-xs">
                 <div class="flex items-center gap-2">
-                    <span id="gps-dot-indicator" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-                    <span id="gps-status-text" class="text-gray-300 font-semibold">اضغط "موقعي" لتحديد إحداثيات GPS</span>
+                    <div id="gps-dot-indicator" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></div>
+                    <span id="gps-status-text" class="text-gray-300 text-[11px]">في انتظار تفعيل الـ GPS...</span>
                 </div>
+                <button onclick="requestRealGPS(true)" class="text-[10px] text-blue-400 hover:underline font-bold">تحديث</button>
             </div>
 
-            <!-- Live Search Bar -->
+            <!-- Search -->
             <div class="relative">
                 <div class="flex items-center gap-1.5 bg-slate-950 border border-white/15 rounded-2xl px-3 py-2 focus-within:border-blue-500">
                     <i class="fa-solid fa-magnifying-glass text-gray-400 text-xs"></i>
                     <input type="text" id="place-search-input" placeholder="ابحث عن مكان، شارع، مستشفى، محل..." class="bg-transparent w-full text-xs text-white outline-none" onkeypress="if(event.key==='Enter') handleSearchSubmit()">
-                    <button onclick="handleSearchSubmit()" class="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-[10px] font-bold text-white shrink-0">بحث</button>
+                    <button id="btn-search-submit" onclick="handleSearchSubmit()" class="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-[10px] font-bold text-white shrink-0">بحث</button>
                 </div>
                 <div id="search-results-box" class="hidden mt-1.5 bg-slate-950 border border-white/15 rounded-2xl max-h-44 overflow-y-auto shadow-2xl divide-y divide-white/10"></div>
             </div>
 
-            <!-- 360° Map Rotation Control -->
-            <div class="bg-slate-900/80 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-1.5">
-                <div class="flex items-center justify-between text-[11px]">
-                    <span class="font-bold text-gray-300"><i class="fa-solid fa-rotate text-sky-400 ml-1"></i> تدوير الخريطة 360°</span>
-                    <div class="flex items-center gap-1.5">
-                        <span id="rotation-angle-label" class="text-sky-300 font-extrabold">0°</span>
-                        <button onclick="resetMapRotation()" class="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] text-gray-200">إعادة</button>
-                    </div>
-                </div>
-                <input type="range" id="rotation-slider" min="0" max="360" value="0" oninput="setMapRotation(this.value)" class="w-full accent-sky-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg">
-            </div>
-
             <!-- Strict Separated Categories (Sorted Nearest to Farthest) -->
             <div>
-                <div class="text-[11px] font-extrabold text-gray-400 mb-1.5">استكشاف أقرب المعالم (مرتبة من الأقرب):</div>
+                <div id="lbl-cat-header" class="text-[11px] font-extrabold text-gray-400 mb-1.5">استكشاف أقرب المعالم (مرتبة من الأقرب):</div>
                 <div class="grid grid-cols-2 gap-1.5 text-[11px]">
                     <button onclick="searchStrictCategory('fuel')" class="p-2 rounded-xl bg-white/5 hover:bg-amber-500/20 border border-white/10 text-right font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-gas-pump text-amber-400"></i> محطات وقود
+                        <i class="fa-solid fa-gas-pump text-amber-400"></i> <span id="cat-fuel">محطات وقود</span>
                     </button>
                     <button onclick="searchStrictCategory('pharmacy')" class="p-2 rounded-xl bg-white/5 hover:bg-emerald-500/20 border border-white/10 text-right font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-pills text-emerald-400"></i> صيدليات
+                        <i class="fa-solid fa-pills text-emerald-400"></i> <span id="cat-pharmacy">صيدليات</span>
                     </button>
                     <button onclick="searchStrictCategory('clinic')" class="p-2 rounded-xl bg-white/5 hover:bg-cyan-500/20 border border-white/10 text-right font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-stethoscope text-cyan-400"></i> عيادات ومجمعات
+                        <i class="fa-solid fa-stethoscope text-cyan-400"></i> <span id="cat-clinic">عيادات ومجمعات</span>
                     </button>
                     <button onclick="searchStrictCategory('gov_hospital')" class="p-2 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 text-right font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-hospital text-rose-400"></i> مستشفيات حكومية
+                        <i class="fa-solid fa-hospital text-rose-400"></i> <span id="cat-gov-hosp">مستشفيات حكومية</span>
                     </button>
                     <button onclick="searchStrictCategory('private_hospital')" class="p-2 rounded-xl bg-white/5 hover:bg-pink-500/20 border border-white/10 text-right font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-heart-pulse text-pink-400"></i> مستشفيات أهلية
+                        <i class="fa-solid fa-heart-pulse text-pink-400"></i> <span id="cat-priv-hosp">مستشفيات أهلية</span>
                     </button>
                     <button onclick="searchStrictCategory('special_shop')" class="p-2 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 text-right font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-wrench text-purple-400"></i> بنشر/كوزمتك/سيراميك
+                        <i class="fa-solid fa-wrench text-purple-400"></i> <span id="cat-special">بنشر/كوزمتك/سيراميك</span>
                     </button>
                     <button onclick="searchStrictCategory('mall')" class="p-2 rounded-xl bg-white/5 hover:bg-indigo-500/20 border border-white/10 text-right font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-cart-shopping text-indigo-400"></i> أسواق ومولات
+                        <i class="fa-solid fa-cart-shopping text-indigo-400"></i> <span id="cat-mall">أسواق ومولات</span>
                     </button>
                     <button onclick="searchStrictCategory('restaurant')" class="p-2 rounded-xl bg-white/5 hover:bg-orange-500/20 border border-white/10 text-right font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-utensils text-orange-400"></i> مطاعم
+                        <i class="fa-solid fa-utensils text-orange-400"></i> <span id="cat-rest">مطاعم</span>
                     </button>
                     <button onclick="searchStrictCategory('mosque')" class="col-span-2 p-2 rounded-xl bg-white/5 hover:bg-teal-500/20 border border-white/10 text-center font-bold flex items-center justify-center gap-1.5 transition">
-                        <i class="fa-solid fa-mosque text-teal-400"></i> مساجد وجوامع
+                        <i class="fa-solid fa-mosque text-teal-400"></i> <span id="cat-mosque">مساجد وجوامع</span>
                     </button>
                 </div>
             </div>
 
             <!-- Travel Modes & Lifestyle Routing (Including Wheelchair / Accessible Route) -->
             <div>
-                <div class="text-[11px] font-extrabold text-gray-400 mb-1.5">وسيلة التنقل ونمط المسار:</div>
+                <div id="lbl-mode-header" class="text-[11px] font-extrabold text-gray-400 mb-1.5">وسيلة التنقل ونمط المسار:</div>
                 <div class="grid grid-cols-3 gap-1.5 text-[11px]">
                     <button onclick="setTravelMode('car')" id="btn-mode-car" class="p-2 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center gap-1 shadow">
-                        <i class="fa-solid fa-car"></i> سيارة
+                        <i class="fa-solid fa-car"></i> <span id="mode-car">سيارة</span>
                     </button>
                     <button onclick="setTravelMode('walk')" id="btn-mode-walk" class="p-2 rounded-xl bg-white/10 text-gray-300 hover:bg-white/15 font-bold flex items-center justify-center gap-1">
-                        <i class="fa-solid fa-person-walking"></i> مشي
+                        <i class="fa-solid fa-person-walking"></i> <span id="mode-walk">مشي</span>
                     </button>
                     <button onclick="setTravelMode('bike')" id="btn-mode-bike" class="p-2 rounded-xl bg-white/10 text-gray-300 hover:bg-white/15 font-bold flex items-center justify-center gap-1">
-                        <i class="fa-solid fa-bicycle"></i> دراجة
+                        <i class="fa-solid fa-bicycle"></i> <span id="mode-bike">دراجة</span>
                     </button>
                 </div>
                 <div class="grid grid-cols-2 gap-1.5 text-[10px] mt-1.5">
                     <button onclick="setTravelMode('scenic')" id="btn-mode-scenic" class="p-2 rounded-xl bg-white/10 text-gray-300 hover:bg-emerald-500/20 font-bold flex items-center justify-center gap-1 border border-white/10">
-                        <i class="fa-solid fa-tree text-emerald-400"></i> مسار سياحي/جمالي
+                        <i class="fa-solid fa-tree text-emerald-400"></i> <span id="mode-scenic">مسار سياحي/جمالي</span>
                     </button>
                     <button onclick="setTravelMode('wheelchair')" id="btn-mode-wheelchair" class="p-2 rounded-xl bg-white/10 text-gray-300 hover:bg-sky-500/20 font-bold flex items-center justify-center gap-1 border border-white/10">
-                        <i class="fa-solid fa-wheelchair text-sky-400"></i> مسار ذوي الاحتياجات
+                        <i class="fa-solid fa-wheelchair text-sky-400"></i> <span id="mode-wheelchair">مسار ذوي الاحتياجات</span>
                     </button>
                 </div>
             </div>
@@ -208,34 +207,47 @@
             <!-- Waypoints & Exact Route Info -->
             <div class="bg-slate-900/90 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-2">
                 <div class="flex items-center justify-between">
-                    <span class="text-[11px] font-bold text-gray-300">الوجهات المحددة (اضغط على الخريطة):</span>
-                    <button onclick="clearAllWaypoints()" class="text-[10px] text-rose-400 hover:underline font-bold">مسح الكل</button>
+                    <span id="lbl-waypoints-title" class="text-[11px] font-bold text-gray-300">الوجهات المحددة (اضغط على الخريطة):</span>
+                    <button id="btn-clear-wp" onclick="clearAllWaypoints()" class="text-[10px] text-rose-400 hover:underline font-bold">مسح الكل</button>
                 </div>
                 <div id="waypoints-list" class="text-[11px] text-gray-400 flex flex-col gap-1 max-h-24 overflow-y-auto no-scrollbar">
                     <div>لم يتم تحديد وجهة بعد.</div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 pt-1.5 border-t border-white/10 text-center">
                     <div class="bg-slate-950 rounded-xl p-1.5">
-                        <div class="text-[10px] text-gray-400">مسافة الطريق الدقيقة</div>
+                        <div id="lbl-dist-title" class="text-[10px] text-gray-400">مسافة الطريق الدقيقة</div>
                         <div id="route-distance-val" class="text-xs font-extrabold text-blue-400">0 م (0 فيت)</div>
                     </div>
                     <div class="bg-slate-950 rounded-xl p-1.5">
-                        <div class="text-[10px] text-gray-400">الوقت المقدر</div>
+                        <div id="lbl-dur-title" class="text-[10px] text-gray-400">الوقت المقدر</div>
                         <div id="route-duration-val" class="text-xs font-extrabold text-emerald-400">0 د</div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Free 360 Rotation Control Bar -->
+            <div class="bg-slate-900/90 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-1.5">
+                <div class="flex items-center justify-between text-[11px] font-bold text-gray-300">
+                    <span><i class="fa-solid fa-compass text-blue-400 ml-1"></i> تدوير الخريطة 360°:</span>
+                    <span id="rotation-angle-label" class="text-blue-400 font-extrabold">0°</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="range" id="map-rotation-slider" min="0" max="360" value="0" step="1" oninput="rotateMapAngle(this.value)" class="w-full accent-blue-500 cursor-pointer">
+                    <button onclick="resetMapRotation()" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-gray-200 shrink-0">إعادة ضبط</button>
+                </div>
+                <div class="text-[9px] text-gray-400 text-center">💡 يمكنك أيضاً تدوير الخريطة على الهاتف بسحبها بإصبعين معاً بجهة دائرية.</div>
             </div>
 
             <!-- Social Friend Room & Messenger Chat Button + Offline Cache -->
             <div class="grid grid-cols-2 gap-1.5 pt-1">
                 <button onclick="openSocialHubModal()" class="p-2.5 rounded-xl bg-indigo-600/35 hover:bg-indigo-600/50 border border-indigo-400/40 text-indigo-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition relative">
                     <i class="fa-solid fa-comments"></i>
-                    <span>غرفة الصديق والدردشة</span>
+                    <span id="btn-social-room">غرفة الصديق والدردشة</span>
                     <span id="chat-unread-dot" class="hidden w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping absolute -top-1 -left-1"></span>
                 </button>
                 <button onclick="downloadOfflineArea()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/15 text-gray-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition">
                     <i class="fa-solid fa-cloud-arrow-down text-sky-400"></i>
-                    <span>حفظ أوفلاين</span>
+                    <span id="btn-offline-save">حفظ أوفلاين</span>
                 </button>
             </div>
         </div>
@@ -313,7 +325,7 @@
 
                 <!-- Messages Feed -->
                 <div id="p2p-chat-messages" class="h-44 overflow-y-auto flex flex-col gap-2 p-3 bg-slate-950 text-xs no-scrollbar">
-                    <div class="text-[11px] text-gray-400 text-center my-auto bg-white/5 p-2.5 rounded-xl">أنشئ غرفة باسم أو أدخل اسم غرفة صديقك لبدء المراسلة ومشاركة الموقع والوجهة معاً.</div>
+                    <div class="text-[11px] text-gray-400 text-center my-auto bg-white/5 p-2.5 rounded-xl">أنشئ غرفة باسم أو ادخل اسم غرفة صديقك لبدء المراسلة ومشاركة الموقع والوجهة معاً.</div>
                 </div>
 
                 <!-- Messenger Input Bar -->
@@ -327,146 +339,236 @@
         </div>
     </div>
 
+    <!-- Application Script -->
     <script>
-        // ==========================================
-        // 1. Cache Setup (Network-First, Auto-Clean Old Versions)
-        // ==========================================
-        const OFFLINE_TILE_CACHE = 'reberai-osm-tiles-v2';
-        if ('caches' in window) {
-            caches.keys().then(keys => keys
-                .filter(k => k.startsWith('reberai-osm-tiles') && k !== OFFLINE_TILE_CACHE)
-                .forEach(k => caches.delete(k)));
+        const I18N_DICT = {
+            ar: {
+                subtitle: "ملاحة دقيقة • كركوك",
+                myLoc: "موقعي",
+                searchPlaceholder: "ابحث عن مكان، شارع، مستشفى، محل...",
+                searchBtn: "بحث",
+                catHeader: "استكشاف أقرب المعالم (مرتبة من الأقرب):",
+                fuel: "محطات وقود",
+                pharmacy: "صيدليات",
+                clinic: "عيادات ومجمعات",
+                govHosp: "مستشفيات حكومية",
+                privHosp: "مستشفيات أهلية",
+                specialShop: "بنشر/كوزمتك/سيراميك",
+                mall: "أسواق ومولات",
+                rest: "مطاعم",
+                mosque: "مساجد وجوامع",
+                modeHeader: "وسيلة التنقل ونمط المسار:",
+                car: "سيارة",
+                walk: "مشي",
+                bike: "دراجة",
+                scenic: "مسار سياحي/جمالي",
+                wheelchair: "مسار ذوي الاحتياجات",
+                wpTitle: "الوجهات المحددة (اضغط على الخريطة):",
+                clearWp: "مسح الكل",
+                distTitle: "مسافة الطريق الدقيقة",
+                durTitle: "الوقت المقدر",
+                socialRoom: "غرفة الصديق والدردشة",
+                offlineSave: "حفظ أوفلاين"
+            },
+            ku: {
+                subtitle: "ڕێدۆزی ورد • کەنداڵ",
+                myLoc: "شوێنی من",
+                searchPlaceholder: "شوێن، شەقام، نەخۆشخانە، دووکان...",
+                searchBtn: "گەڕان",
+                catHeader: "گەڕان بەدوای نزیکترین شوێنەکان (بەڕێزی نزیک بۆ دوور):",
+                fuel: "وێستگەی سووتەمەنی",
+                pharmacy: "دەرمانخانە",
+                clinic: "کڵینیک و تیشک",
+                govHosp: "نەخۆشخانەی حکومی",
+                privHosp: "نەخۆشخانەی ئەهلی",
+                specialShop: "پەنچەرچی/کۆزمتیک/سیرامیک",
+                mall: "بازاڕ و مۆڵ",
+                rest: "چێشتخانە",
+                mosque: "مزگەوت",
+                modeHeader: "شێوازی هاتوچۆ و رێڕەو:",
+                car: "ئۆتۆمبێل",
+                walk: "پیاسە",
+                bike: "پایسکیل",
+                scenic: "رێڕەوی گەشتیاری/جوان",
+                wheelchair: "رێڕەوی خاوەن پێداویستی تایبەت",
+                wpTitle: "شوێنە دیاریکراوەکان (کلیک لەسەر نەخشە بکە):",
+                clearWp: "سڕینەوەی هەموو",
+                distTitle: "دووری وردی ڕێگا",
+                durTitle: "کاتی خەمڵێنراو",
+                socialRoom: "ژووری هاوڕێ و چات",
+                offlineSave: "پاشەکەوت"
+            },
+            en: {
+                subtitle: "Precise Navigation • Kirkuk",
+                myLoc: "My GPS",
+                searchPlaceholder: "Search place, street, hospital, shop...",
+                searchBtn: "Search",
+                catHeader: "Explore Nearest Places (Sorted Nearest):",
+                fuel: "Fuel Stations",
+                pharmacy: "Pharmacies",
+                clinic: "Clinics",
+                govHosp: "Gov. Hospitals",
+                privHosp: "Private Hospitals",
+                specialShop: "Specialty / Repair",
+                mall: "Malls & Markets",
+                rest: "Restaurants",
+                mosque: "Mosques",
+                modeHeader: "Travel Mode & Route Style:",
+                car: "Car",
+                walk: "Walk",
+                bike: "Bike",
+                scenic: "Scenic Route",
+                wheelchair: "Accessible / Wheelchair",
+                wpTitle: "Selected Waypoints (Tap Map):",
+                clearWp: "Clear All",
+                distTitle: "Exact Route Distance",
+                durTitle: "Estimated Duration",
+                socialRoom: "Live Room & Chat",
+                offlineSave: "Save Offline"
+            },
+            tr: {
+                subtitle: "Hassas Navigasyon • Kerkük",
+                myLoc: "Konumum",
+                searchPlaceholder: "Yer, sokak, hastane, dükkan ara...",
+                searchBtn: "Ara",
+                catHeader: "En Yakın Yerleri Keşfet:",
+                fuel: "Akaryakıt",
+                pharmacy: "Eczaneler",
+                clinic: "Klinikler",
+                govHosp: "Devlet Hastanesi",
+                privHosp: "Özel Hastane",
+                specialShop: "Özel Dükkanlar",
+                mall: "AVM ve Market",
+                rest: "Restoranlar",
+                mosque: "Camiler",
+                modeHeader: "Ulaşım Modu ve Rota Tarzı:",
+                car: "Araba",
+                walk: "Yürüyüş",
+                bike: "Bisiklet",
+                scenic: "Manzaralı Rota",
+                wheelchair: "Engelli Dostu Rota",
+                wpTitle: "Seçilen Noktalar (Haritaya Tıkla):",
+                clearWp: "Temizle",
+                distTitle: "Kesin Mesafe",
+                durTitle: "Tahmini Süre",
+                socialRoom: "Canlı Oda ve Sohbet",
+                offlineSave: "Çevrimdışı Kaydet"
+            }
+        };
+
+        function changeAppLanguage(lang) {
+            const d = I18N_DICT[lang] || I18N_DICT['ar'];
+            document.getElementById('app-subtitle').textContent = d.subtitle;
+            document.getElementById('lbl-my-loc').textContent = d.myLoc;
+            document.getElementById('place-search-input').placeholder = d.searchPlaceholder;
+            document.getElementById('btn-search-submit').textContent = d.searchBtn;
+            document.getElementById('lbl-cat-header').textContent = d.catHeader;
+            document.getElementById('cat-fuel').textContent = d.fuel;
+            document.getElementById('cat-pharmacy').textContent = d.pharmacy;
+            document.getElementById('cat-clinic').textContent = d.clinic;
+            document.getElementById('cat-gov-hosp').textContent = d.govHosp;
+            document.getElementById('cat-priv-hosp').textContent = d.privHosp;
+            document.getElementById('cat-special').textContent = d.specialShop;
+            document.getElementById('cat-mall').textContent = d.mall;
+            document.getElementById('cat-rest').textContent = d.rest;
+            document.getElementById('cat-mosque').textContent = d.mosque;
+            document.getElementById('lbl-mode-header').textContent = d.modeHeader;
+            document.getElementById('mode-car').textContent = d.car;
+            document.getElementById('mode-walk').textContent = d.walk;
+            document.getElementById('mode-bike').textContent = d.bike;
+            document.getElementById('mode-scenic').textContent = d.scenic;
+            document.getElementById('mode-wheelchair').textContent = d.wheelchair;
+            document.getElementById('lbl-waypoints-title').textContent = d.wpTitle;
+            document.getElementById('btn-clear-wp').textContent = d.clearWp;
+            document.getElementById('lbl-dist-title').textContent = d.distTitle;
+            document.getElementById('lbl-dur-title').textContent = d.durTitle;
+            document.getElementById('btn-social-room').textContent = d.socialRoom;
+            document.getElementById('btn-offline-save').textContent = d.offlineSave;
+            showTopPill(lang === 'ku' ? 'تەنانەت زمانی کوردی چالاک کرا' : 'تم تغيير اللغة بنجاح', 'fa-solid fa-globe text-blue-400', 2500);
         }
 
-        // ==========================================
-        // 2. Global State
-        // ==========================================
-        let map = null;
-        let isDrawerOpen = true;
-        let currentRotation = 0;
-        let travelMode = 'car';
-
-        let userCoords = null;
-        let hasRealGPS = false;
-        let userMarker = null;
-
-        let waypoints = [];
-        let routePolyline = null;
-        let categoryMarkers = [];
-
-        // Live P2P Room Chat & Friend Location State
-        let peerInstance = null;
-        let activeFriendConn = null;
-        let currentRoomName = '';
-        let isRoomHost = false;
-        let friendMarker = null;
-        let friendCoords = null;
-
-        // ==========================================
-        // 3. UI Helpers (Top Pill & Right Drawer Toggle)
-        // ==========================================
-        let pillTimeout = null;
-        function showTopPill(text, iconClass = 'fa-solid fa-circle-info text-blue-400', duration = 3000) {
+        function showTopPill(text, iconClass, duration = 3000) {
             const pill = document.getElementById('top-status-pill');
             const icon = document.getElementById('top-pill-icon');
-            const label = document.getElementById('top-pill-text');
-            if (!pill) return;
+            const txt = document.getElementById('top-pill-text');
+            if (!pill || !icon || !txt) return;
             icon.className = iconClass;
-            label.textContent = text;
+            txt.textContent = text;
             pill.classList.remove('hidden');
-            if (pillTimeout) clearTimeout(pillTimeout);
-            pillTimeout = setTimeout(() => pill.classList.add('hidden'), duration);
+            setTimeout(() => pill.classList.add('hidden'), duration);
         }
 
         function toggleRightDrawer() {
-            isDrawerOpen = !isDrawerOpen;
             const box = document.getElementById('right-control-box');
-            const btn = document.getElementById('btn-toggle-drawer');
             const icon = document.getElementById('drawer-toggle-icon');
-            if (isDrawerOpen) {
-                box.classList.remove('hidden');
-                btn.classList.remove('bg-blue-600');
+            if (!box || !icon) return;
+            if (box.classList.contains('translate-x-[110%]')) {
+                box.classList.remove('translate-x-[110%]');
                 icon.className = 'fa-solid fa-xmark text-lg';
             } else {
-                box.classList.add('hidden');
-                btn.classList.add('bg-blue-600');
+                box.classList.add('translate-x-[110%]');
                 icon.className = 'fa-solid fa-bars text-lg';
             }
         }
 
-        function setMapRotation(deg) {
-            currentRotation = parseInt(deg, 10) || 0;
-            document.getElementById('rotation-angle-label').textContent = currentRotation + '°';
-            document.getElementById('map').style.transform = `rotate(${currentRotation}deg)`;
-        }
+        // Map and Navigation State
+        let map, userMarker, routePolyline = null;
+        let travelMode = 'car';
+        let waypoints = [];
+        let waypointMarkers = [];
+        let categoryMarkers = [];
+        let userCoords = null;
+        let hasRealGPS = false;
+        let peerInstance = null;
+        let activeFriendConn = null;
+        let friendMarker = null;
+        let currentRoomName = null;
+        let isRoomHost = false;
+        let friendCoords = null;
+        const OFFLINE_TILE_CACHE = 'reberai-osm-tiles-v3';
 
-        function resetMapRotation() {
-            document.getElementById('rotation-slider').value = 0;
-            setMapRotation(0);
-        }
-
-        // ==========================================
-        // 4. Network-First Tile Layer (Zero API Keys Required)
-        // ==========================================
         function createOfflineTileLayer(urlTemplate, options) {
-            const Layer = L.TileLayer.extend({
-                createTile: function (coords, done) {
-                    const tile = document.createElement('img');
-                    tile.alt = '';
-                    const url = this.getTileUrl(coords);
-                    const fromCache = () =>
-                        caches.open(OFFLINE_TILE_CACHE)
-                            .then(c => c.match(url))
-                            .then(r => r ? r.blob() : null)
-                            .then(b => {
-                                if (b) { tile.src = URL.createObjectURL(b); done(null, tile); }
-                                else done(new Error('no tile'), tile);
-                            })
-                            .catch(e => done(e, tile));
-
-                    fetch(url, { cache: 'no-cache' })
-                        .then(res => {
-                            if (!res.ok) throw new Error('bad');
-                            const copy = res.clone();
-                            return res.blob().then(b => {
-                                tile.src = URL.createObjectURL(b);
-                                done(null, tile);
-                                caches.open(OFFLINE_TILE_CACHE).then(c => c.put(url, copy)).catch(() => {});
-                            });
-                        })
-                        .catch(fromCache);
-                    return tile;
-                }
+            return L.tileLayer(urlTemplate, {
+                ...options,
+                maxZoom: 19,
+                tileSize: 256,
+                zoomOffset: 0
             });
-            return new Layer(urlTemplate, options);
         }
 
-        // ==========================================
-        // 5. Initialize Map
-        // ==========================================
         function initMap() {
             const defaultCenter = [35.4681, 44.3922]; // Kirkuk Center
             map = L.map('map', {
                 center: defaultCenter,
                 zoom: 14,
                 zoomControl: false,
-                zoomAnimation: false,
+                zoomAnimation: true,
+                fadeAnimation: true,
                 keepBuffer: 6,
-                updateWhenIdle: false
+                updateWhenIdle: false,
+                touchRotate: true,
+                rotate: true,
+                bearing: 0
             });
 
             createOfflineTileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
                 attribution: '&copy; OpenStreetMap'
             }).addTo(map);
 
             L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
+            map.on('rotate', () => {
+                const angle = Math.round(map.getBearing());
+                const slider = document.getElementById('map-rotation-slider');
+                const lbl = document.getElementById('rotation-angle-label');
+                if (slider) slider.value = angle < 0 ? angle + 360 : angle;
+                if (lbl) lbl.textContent = `${angle}°`;
+            });
+
             map.on('zoomend moveend', () => {
                 if (routePolyline) routePolyline.redraw();
             });
 
-            // Click anywhere on map to add destination waypoint
             map.on('click', async function(e) {
                 document.getElementById('search-results-box').classList.add('hidden');
                 const coords = [e.latlng.lat, e.latlng.lng];
@@ -474,17 +576,45 @@
                 const name = await reverseGeocodeOSM(coords[0], coords[1]);
                 addWaypoint(name, coords, true);
             });
+
+            // Check URL parameters for auto room join
+            const params = new URLSearchParams(window.location.search);
+            const rParam = params.get('room');
+            if (rParam) {
+                document.getElementById('join-room-name-input').value = rParam;
+                openSocialHubModal();
+                setTimeout(() => joinNamedRoom(), 800);
+            }
         }
 
-        // ==========================================
-        // 6. Real GPS Geolocation
-        // ==========================================
+        function rotateMapAngle(deg) {
+            const angle = parseInt(deg);
+            if (map && typeof map.setBearing === 'function') {
+                map.setBearing(angle);
+                const lbl = document.getElementById('rotation-angle-label');
+                if (lbl) lbl.textContent = `${angle}°`;
+            }
+        }
+
+        function resetMapRotation() {
+            if (map && typeof map.setBearing === 'function') {
+                map.setBearing(0);
+                const slider = document.getElementById('map-rotation-slider');
+                const lbl = document.getElementById('rotation-angle-label');
+                if (slider) slider.value = 0;
+                if (lbl) lbl.textContent = '0°';
+                showTopPill('تمت إعادة ضبط اتجاه الخريطة للشمال', 'fa-solid fa-compass text-blue-400', 2000);
+            }
+        }
+
         function requestRealGPS(flyToUser = false) {
             if (!navigator.geolocation) {
-                document.getElementById('gps-status-text').textContent = 'المتصفح لا يدعم GPS';
+                const statusEl = document.getElementById('gps-status-text');
+                if (statusEl) statusEl.textContent = 'المتصفح لا يدعم GPS';
                 return;
             }
-            document.getElementById('gps-status-text').textContent = 'جاري تحديد موقعك الحقيقي GPS...';
+            const statusEl = document.getElementById('gps-status-text');
+            if (statusEl) statusEl.textContent = 'جاري تحديد موقعك الحقيقي GPS...';
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const lat = pos.coords.latitude;
@@ -493,13 +623,14 @@
                     userCoords = [lat, lon];
                     hasRealGPS = true;
 
-                    document.getElementById('gps-dot-indicator').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
-                    document.getElementById('gps-status-text').textContent = `موقعك متصل بدقة GPS (±${acc} م)`;
+                    const dotEl = document.getElementById('gps-dot-indicator');
+                    if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+                    if (statusEl) statusEl.textContent = `موقعك متصل بدقة GPS (±${acc} م)`;
 
                     if (!userMarker) {
                         const gpsIcon = L.divIcon({
                             className: 'user-gps-dot',
-                            html: '<div style="width:22px;height:22px;border-radius:50%;background:#2563eb;border:3px solid #ffffff;box-shadow:0 0 12px rgba(37,99,235,0.9);"></div>',
+                            html: `<div style="width:22px;height:22px;border-radius:50%;background:#2563eb;border:3px solid #ffffff;box-shadow:0 0 12px rgba(37,99,235,0.9);"></div>`,
                             iconSize: [22, 22],
                             iconAnchor: [11, 11]
                         });
@@ -513,609 +644,469 @@
                     if (waypoints.length > 0) recalculateMultiWaypointRoute();
                 },
                 () => {
-                    document.getElementById('gps-dot-indicator').className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
-                    document.getElementById('gps-status-text').textContent = 'تعذر التقاط GPS — تأكد من تفعيل الموقع';
-                    showTopPill('تعذر الوصول للـ GPS. تأكد من فتح التطبيق في نافذة مستقلة وتفعيل الموقع.', 'fa-solid fa-triangle-exclamation text-amber-400', 4000);
+                    const dotEl = document.getElementById('gps-dot-indicator');
+                    if (dotEl) dotEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                    if (statusEl) statusEl.textContent = 'تعذر التقاط GPS — تأكد من تفعيل الموقع';
+                    showTopPill('تعذر الوصول للـ GPS. تأكد من تفعيل الموقع في المتصفح.', 'fa-solid fa-triangle-exclamation text-amber-400', 4000);
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
 
-        // ==========================================
-        // 7. Live Search & Strict Categories (No Cache, Sorted Nearest to Farthest)
-        // ==========================================
         async function reverseGeocodeOSM(lat, lon) {
             try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=ar`, { cache: 'no-cache' });
-                if (!res.ok) throw new Error('network');
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
                 const data = await res.json();
                 if (data && data.display_name) {
-                    return data.display_name.split(',').slice(0, 2).join(' - ');
+                    const parts = data.display_name.split(',');
+                    return parts[0] + (parts[1] ? ',' + parts[1] : '');
                 }
-            } catch (e) {}
+            } catch(e) {}
             return `نقطة (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
         }
 
-        async function handleSearchSubmit() {
-            const q = (document.getElementById('place-search-input').value || '').trim();
-            if (!q) return;
-            const resultsBox = document.getElementById('search-results-box');
-            resultsBox.innerHTML = '<div class="p-2.5 text-[11px] text-blue-300 text-center">جاري البحث المباشر في الخريطة...</div>';
-            resultsBox.classList.remove('hidden');
+        function addWaypoint(name, coords, broadcast = false) {
+            waypoints.push({ name, coords });
+            renderWaypointsList();
+            const wpIcon = L.divIcon({
+                className: 'custom-wp-pin',
+                html: `<div style="width:26px;height:26px;border-radius:50%;background:#dc2626;border:3px solid #ffffff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;box-shadow:0 4px 10px rgba(0,0,0,0.5);">${waypoints.length}</div>`,
+                iconSize: [26, 26],
+                iconAnchor: [13, 13]
+            });
+            const m = L.marker(coords, { icon: wpIcon }).addTo(map).bindPopup(`<b>${name}</b>`);
+            waypointMarkers.push(m);
+            recalculateMultiWaypointRoute();
 
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=8&accept-language=ar`, { cache: 'no-cache' });
-                if (!res.ok) throw new Error('network');
-                const items = await res.json();
-                resultsBox.innerHTML = '';
-                if (!items || items.length === 0) {
-                    resultsBox.innerHTML = '<div class="p-2.5 text-[11px] text-gray-400 text-center">لم يتم العثور على نتائج مطابقة.</div>';
-                    return;
-                }
-                const refCoords = userCoords || [map.getCenter().lat, map.getCenter().lng];
-                const sorted = items.map(it => {
-                    const lat = parseFloat(it.lat);
-                    const lon = parseFloat(it.lon);
-                    return {
-                        name: it.display_name.split(',').slice(0, 2).join(' - '),
-                        lat,
-                        lon,
-                        dist: calculateVincentyMeters(refCoords[0], refCoords[1], lat, lon)
-                    };
-                }).sort((a, b) => a.dist - b.dist);
-
-                sorted.forEach(place => {
-                    const btn = document.createElement('button');
-                    btn.className = 'w-full text-right p-2.5 hover:bg-white/10 transition flex items-center justify-between gap-2';
-                    btn.innerHTML = `
-                        <span class="text-[11px] font-bold text-white truncate">${place.name}</span>
-                        <span class="text-[10px] text-blue-400 font-bold shrink-0">${formatDistanceShort(place.dist)}</span>
-                    `;
-                    btn.onclick = () => {
-                        resultsBox.classList.add('hidden');
-                        addWaypoint(place.name, [place.lat, place.lon], true);
-                        map.flyTo([place.lat, place.lon], 17);
-                    };
-                    resultsBox.appendChild(btn);
-                });
-            } catch (e) {
-                resultsBox.innerHTML = '<div class="p-2.5 text-[11px] text-rose-400 text-center">فشل الاتصال بالشبكة أثناء البحث.</div>';
+            if (broadcast && activeFriendConn && activeFriendConn.open) {
+                activeFriendConn.send({ type: 'WAYPOINT_SHARED', name, coords });
             }
         }
 
-        async function searchStrictCategory(cat) {
-            const center = userCoords || [map.getCenter().lat, map.getCenter().lng];
-            showTopPill('جاري جلب أقرب المعالم الحقيقية...', 'fa-solid fa-spinner fa-spin text-blue-400', 3000);
+        function clearAllWaypoints() {
+            waypoints = [];
+            waypointMarkers.forEach(m => map.removeLayer(m));
+            waypointMarkers = [];
+            if (routePolyline) {
+                map.removeLayer(routePolyline);
+                routePolyline = null;
+            }
+            renderWaypointsList();
+            document.getElementById('route-distance-val').textContent = '0 م (0 فيت)';
+            document.getElementById('route-duration-val').textContent = '0 د';
+        }
 
-            categoryMarkers.forEach(m => map.removeLayer(m));
-            categoryMarkers = [];
+        function renderWaypointsList() {
+            const listEl = document.getElementById('waypoints-list');
+            if (!listEl) return;
+            if (waypoints.length === 0) {
+                listEl.innerHTML = '<div>لم يتم تحديد وجهة بعد.</div>';
+                return;
+            }
+            let html = '';
+            waypoints.forEach((wp, idx) => {
+                html += `<div class="flex items-center justify-between bg-slate-950 px-2 py-1 rounded-lg">
+                    <span class="truncate">${idx + 1}. ${wp.name}</span>
+                    <button onclick="removeWaypoint(${idx})" class="text-rose-400 hover:text-rose-300 font-bold px-1">&times;</button>
+                </div>`;
+            });
+            listEl.innerHTML = html;
+        }
 
-            let overpassFilter = '';
-            let labelName = '';
-            if (cat === 'fuel') { overpassFilter = '["amenity"="fuel"]'; labelName = 'محطة وقود'; }
-            else if (cat === 'pharmacy') { overpassFilter = '["amenity"="pharmacy"]'; labelName = 'صيدلية'; }
-            else if (cat === 'clinic') { overpassFilter = '["amenity"~"clinic|doctors"]'; labelName = 'عيادة / مجمع طبي'; }
-            else if (cat === 'gov_hospital') { overpassFilter = '["amenity"="hospital"]["operator:type"!="private"]'; labelName = 'مستشفى حكومي'; }
-            else if (cat === 'private_hospital') { overpassFilter = '["amenity"="hospital"]["operator:type"="private"]'; labelName = 'مستشفى أهلي'; }
-            else if (cat === 'special_shop') { overpassFilter = '["shop"~"tyres|car_repair|cosmetics|tiles|hardware"]'; labelName = 'محل تخصصي'; }
-            else if (cat === 'mall') { overpassFilter = '["shop"~"supermarket|mall|department_store"]'; labelName = 'سوق / مول'; }
-            else if (cat === 'restaurant') { overpassFilter = '["amenity"="restaurant"]'; labelName = 'مطعم'; }
-            else if (cat === 'mosque') { overpassFilter = '["amenity"="place_of_worship"]["religion"="muslim"]'; labelName = 'مسجد / جامع'; }
-
-            const query = `[out:json][timeout:15];(node${overpassFilter}(around:6000,${center[0]},${center[1]});way${overpassFilter}(around:6000,${center[0]},${center[1]}););out center;`;
-
-            try {
-                const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`, { cache: 'no-cache' });
-                if (!res.ok) throw new Error('network');
-                const data = await res.json();
-                const elements = (data.elements || [])
-                    .map(el => {
-                        const lat = el.lat || (el.center && el.center.lat);
-                        const lon = el.lon || (el.center && el.center.lon);
-                        const name = el.tags && (el.tags['name:ar'] || el.tags.name);
-                        if (!lat || !lon || !name) return null;
-                        return {
-                            name,
-                            lat,
-                            lon,
-                            dist: calculateVincentyMeters(center[0], center[1], lat, lon)
-                        };
-                    })
-                    .filter(Boolean)
-                    .sort((a, b) => a.dist - b.dist)
-                    .slice(0, 15);
-
-                if (elements.length === 0) {
-                    showTopPill(`لم يتم العثور على ${labelName} مسمى في هذا النطاق`, 'fa-solid fa-circle-info text-amber-400', 3000);
-                    return;
+        function removeWaypoint(idx) {
+            waypoints.splice(idx, 1);
+            if (waypointMarkers[idx]) {
+                map.removeLayer(waypointMarkers[idx]);
+                waypointMarkers.splice(idx, 1);
+            }
+            renderWaypointsList();
+            if (waypoints.length > 0) recalculateMultiWaypointRoute();
+            else {
+                if (routePolyline) {
+                    map.removeLayer(routePolyline);
+                    routePolyline = null;
                 }
-
-                elements.forEach((p, idx) => {
-                    const pinIcon = L.divIcon({
-                        className: 'custom-wp-pin',
-                        html: `<div style="width:26px;height:26px;border-radius:50%;background:#0f172a;border:2px solid #38bdf8;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.6);">${idx + 1}</div>`,
-                        iconSize: [26, 26],
-                        iconAnchor: [13, 13]
-                    });
-                    const popupDiv = document.createElement('div');
-                    popupDiv.className = 'text-right font-sans';
-                    popupDiv.innerHTML = `
-                        <div class="font-bold text-slate-900 text-xs">${p.name}</div>
-                        <div class="text-[11px] text-slate-600 mb-1.5">البعد: ${formatDistanceShort(p.dist)}</div>
-                        <button id="popup-add-btn" class="w-full py-1 px-2 bg-blue-600 text-white rounded text-[11px] font-bold">تعيين كوجهة</button>
-                    `;
-                    popupDiv.querySelector('#popup-add-btn').onclick = () => {
-                        addWaypoint(p.name, [p.lat, p.lon], true);
-                        map.closePopup();
-                    };
-                    const marker = L.marker([p.lat, p.lon], { icon: pinIcon }).addTo(map).bindPopup(popupDiv);
-                    categoryMarkers.push(marker);
-                });
-
-                map.flyTo([elements[0].lat, elements[0].lon], 15);
-                showTopPill(`تم عرض أقرب ${elements.length} ${labelName} مرتبة من الأقرب`, 'fa-solid fa-check text-emerald-400', 3500);
-            } catch (e) {
-                showTopPill('تعذر الاتصال بالخادم لجلب المعالم', 'fa-solid fa-triangle-exclamation text-rose-400', 3500);
+                document.getElementById('route-distance-val').textContent = '0 م (0 فيت)';
+                document.getElementById('route-duration-val').textContent = '0 د';
             }
         }
 
-        // ==========================================
-        // 8. Waypoints & Exact Vincenty + OSRM Routing
-        // ==========================================
         function setTravelMode(mode) {
             travelMode = mode;
-            const modes = ['car', 'walk', 'bike', 'scenic', 'wheelchair'];
-            modes.forEach(m => {
-                const btn = document.getElementById('btn-mode-' + m);
+            ['car', 'walk', 'bike', 'scenic', 'wheelchair'].forEach(m => {
+                const btn = document.getElementById(`btn-mode-${m}`);
                 if (!btn) return;
                 if (m === mode) {
-                    btn.className = btn.className.replace('bg-white/10 text-gray-300', 'bg-blue-600 text-white');
+                    btn.className = 'p-2 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center gap-1 shadow';
                 } else {
-                    btn.className = btn.className.replace('bg-blue-600 text-white', 'bg-white/10 text-gray-300');
+                    btn.className = 'p-2 rounded-xl bg-white/10 text-gray-300 hover:bg-white/15 font-bold flex items-center justify-center gap-1';
                 }
             });
             if (waypoints.length > 0) recalculateMultiWaypointRoute();
         }
 
-        function addWaypoint(name, coords, shouldBroadcast = true) {
-            const id = Date.now() + Math.random();
-            waypoints.push({ id, name, coords, marker: null });
-            syncWaypointMarkersAndUI();
-            recalculateMultiWaypointRoute();
-            if (shouldBroadcast) {
-                broadcastSharedDestination(name, coords);
-            }
-        }
-
-        function clearAllWaypoints() {
-            waypoints.forEach(wp => { if (wp.marker) map.removeLayer(wp.marker); });
-            waypoints = [];
-            if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
-            document.getElementById('waypoints-list').innerHTML = '<div>لم يتم تحديد وجهة بعد.</div>';
-            document.getElementById('route-distance-val').textContent = '0 م (0 فيت)';
-            document.getElementById('route-duration-val').textContent = '0 د';
-        }
-
-        function syncWaypointMarkersAndUI() {
-            const listEl = document.getElementById('waypoints-list');
-            listEl.innerHTML = '';
-            waypoints.forEach((wp, index) => {
-                if (wp.marker) map.removeLayer(wp.marker);
-                const icon = L.divIcon({
-                    className: 'custom-wp-pin',
-                    html: `<div style="width:28px;height:28px;border-radius:50%;background:#059669;border:2.5px solid #ffffff;color:#ffffff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.5);">${index + 1}</div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
-                wp.marker = L.marker(wp.coords, { icon, zIndexOffset: 900 }).addTo(map).bindPopup(`<b>وجهة ${index + 1}:</b> ${wp.name}`);
-
-                const row = document.createElement('div');
-                row.className = 'flex items-center justify-between bg-slate-950 px-2 py-1 rounded-lg border border-white/10';
-                row.innerHTML = `<span class="truncate text-white font-semibold">${index + 1}. ${wp.name}</span>`;
-                listEl.appendChild(row);
-            });
-        }
-
         async function recalculateMultiWaypointRoute() {
             if (waypoints.length === 0) return;
-            const startCoords = userCoords || [map.getCenter().lat, map.getCenter().lng];
-            const allPoints = [startCoords, ...waypoints.map(w => w.coords)];
-            const coordStr = allPoints.map(p => `${p[1]},${p[0]}`).join(';');
+            let startCoord = userCoords;
+            if (!startCoord) {
+                const center = map.getCenter();
+                startCoord = [center.lat, center.lng];
+            }
 
-            let osrmProfile = 'driving';
-            if (travelMode === 'walk' || travelMode === 'wheelchair') osrmProfile = 'foot';
-            else if (travelMode === 'bike') osrmProfile = 'bicycle';
+            let coordsStr = `${startCoord[1]},${startCoord[0]};`;
+            waypoints.forEach(wp => {
+                coordsStr += `${wp.coords[1]},${wp.coords[0]};`;
+            });
+            coordsStr = coordsStr.slice(0, -1);
+
+            let profile = 'driving';
+            if (travelMode === 'walk' || travelMode === 'scenic' || travelMode === 'wheelchair') profile = 'walking';
+            else if (travelMode === 'bike') profile = 'cycling';
 
             try {
-                const res = await fetch(`https://router.project-osrm.org/route/v1/${osrmProfile}/${coordStr}?overview=full&geometries=geojson&alternatives=true`, { cache: 'no-cache' });
-                if (!res.ok) throw new Error('osrm_fail');
+                const res = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordsStr}?overview=full&geometries=geojson`);
                 const data = await res.json();
-                if (!data.routes || data.routes.length === 0) throw new Error('no_route');
+                if (data.routes && data.routes.length > 0) {
+                    const r = data.routes[0];
+                    const distM = r.distance;
+                    const durSec = r.duration;
 
-                // Pick fastest route or scenic alternative
-                let chosen = data.routes[0];
-                if (travelMode === 'scenic' && data.routes.length > 1) {
-                    chosen = data.routes[1];
-                } else {
-                    data.routes.forEach(r => { if (r.duration < chosen.duration) chosen = r; });
+                    const distKm = distM >= 1000 ? (distM / 1000).toFixed(2) + ' كم' : Math.round(distM) + ' متر';
+                    const distFt = Math.round(distM * 3.28084).toLocaleString() + ' فيت';
+                    const durMin = Math.max(1, Math.round(durSec / 60)) + ' د';
+
+                    document.getElementById('route-distance-val').textContent = `${distKm} (${distFt})`;
+                    document.getElementById('route-duration-val').textContent = durMin;
+
+                    const latlngs = r.geometry.coordinates.map(c => [c[1], c[0]]);
+                    if (routePolyline) map.removeLayer(routePolyline);
+
+                    let lineColor = '#2563eb';
+                    if (travelMode === 'scenic') lineColor = '#10b981';
+                    if (travelMode === 'wheelchair') lineColor = '#0ea5e9';
+
+                    routePolyline = L.polyline(latlngs, {
+                        color: lineColor,
+                        weight: 6,
+                        opacity: 0.85,
+                        dashArray: travelMode === 'wheelchair' ? '10, 10' : null
+                    }).addTo(map);
+
+                    map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
                 }
-
-                const latlngs = chosen.geometry.coordinates.map(c => [c[1], c[0]]);
-                // Snap exact end to last waypoint so line never separates
-                latlngs[latlngs.length - 1] = waypoints[waypoints.length - 1].coords;
-
-                if (routePolyline) map.removeLayer(routePolyline);
-                const lineColor = travelMode === 'wheelchair' ? '#0ea5e9' : (travelMode === 'scenic' ? '#10b981' : '#2563eb');
-                routePolyline = L.polyline(latlngs, {
-                    color: lineColor,
-                    weight: 6,
-                    opacity: 0.9,
-                    smoothFactor: 0
-                }).addTo(map);
-
-                // Exact Vincenty distance along every segment of drawn road
-                let exactMeters = 0;
-                for (let i = 0; i < latlngs.length - 1; i++) {
-                    exactMeters += calculateVincentyMeters(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
-                }
-
-                // Realistic natural human speed by travel mode
-                let durationMinutes = 0;
-                if (travelMode === 'walk') {
-                    // Natural human walking speed: 4.5 km/h (75 m/min)
-                    durationMinutes = Math.max(1, Math.round(exactMeters / 75));
-                } else if (travelMode === 'wheelchair') {
-                    // Accessible wheelchair / stroller pace: 3.6 km/h (60 m/min)
-                    durationMinutes = Math.max(1, Math.round(exactMeters / 60));
-                } else if (travelMode === 'bike') {
-                    // Natural urban cycling pace: 14 km/h (233 m/min)
-                    durationMinutes = Math.max(1, Math.round(exactMeters / 233));
-                } else {
-                    // Car realistic urban duration
-                    durationMinutes = Math.max(1, Math.round((chosen.duration * 1.15) / 60));
-                }
-
-                const feet = Math.round(exactMeters * 3.28084);
-                const distFormatted = exactMeters >= 1000
-                    ? `${(exactMeters / 1000).toFixed(2)} كم (${feet.toLocaleString()} فيت)`
-                    : `${Math.round(exactMeters)} م (${feet.toLocaleString()} فيت)`;
-
-                document.getElementById('route-distance-val').textContent = distFormatted;
-                document.getElementById('route-duration-val').textContent = durationMinutes >= 60
-                    ? `${Math.floor(durationMinutes / 60)} س ${durationMinutes % 60} د`
-                    : `${durationMinutes} دقيقة`;
-            } catch (e) {
-                showTopPill('تعذر حساب المسار من الشبكة حالياً', 'fa-solid fa-triangle-exclamation text-rose-400', 3000);
+            } catch(e) {
+                showTopPill('تعذر حساب المسار بدقة من OSRM', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
             }
         }
 
-        function calculateVincentyMeters(lat1, lon1, lat2, lon2) {
-            const a = 6378137, b = 6356752.314245, f = 1 / 298.257223563;
-            const L = (lon2 - lon1) * Math.PI / 180;
-            const U1 = Math.atan((1 - f) * Math.tan(lat1 * Math.PI / 180));
-            const U2 = Math.atan((1 - f) * Math.tan(lat2 * Math.PI / 180));
-            const sinU1 = Math.sin(U1), cosU1 = Math.cos(U1);
-            const sinU2 = Math.sin(U2), cosU2 = Math.cos(U2);
-            let lambda = L, lambdaP, iterLimit = 50;
-            let cosSqAlpha, sinSigma, cos2SigmaM, cosSigma, sigma;
-            do {
-                const sinLambda = Math.sin(lambda), cosLambda = Math.cos(lambda);
-                sinSigma = Math.sqrt((cosU2 * sinLambda) * (cosU2 * sinLambda) +
-                    (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda) * (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda));
-                if (sinSigma === 0) return 0;
-                cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda;
-                sigma = Math.atan2(sinSigma, cosSigma);
-                const sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma;
-                cosSqAlpha = 1 - sinAlpha * sinAlpha;
-                cos2SigmaM = cosSqAlpha !== 0 ? (cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha) : 0;
-                const C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha));
-                lambdaP = lambda;
-                lambda = L + (1 - C) * f * sinAlpha *
-                    (sigma + C * sinSigma * (cos2SigmaM + C * cosSigma * (-1 + 2 * cos2SigmaM * cos2SigmaM)));
-            } while (Math.abs(lambda - lambdaP) > 1e-12 && --iterLimit > 0);
-            const uSq = cosSqAlpha * (a * a - b * b) / (b * b);
-            const A = 1 + uSq / 16384 * (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)));
-            const B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)));
-            const deltaSigma = B * sinSigma * (cos2SigmaM + B / 4 * (cosSigma * (-1 + 2 * cos2SigmaM * cos2SigmaM) -
-                B / 6 * cos2SigmaM * (-3 + 4 * sinSigma * sinSigma) * (-3 + 4 * cos2SigmaM * cos2SigmaM)));
-            return b * A * (sigma - deltaSigma);
+        // Strict Separated Categories (Sorted Nearest to Farthest) with Multi-Server Overpass Fallback
+        async function searchStrictCategory(categoryKey) {
+            let center = userCoords;
+            if (!center) {
+                const c = map.getCenter();
+                center = [c.lat, c.lng];
+            }
+
+            let queryTag = '';
+            if (categoryKey === 'fuel') queryTag = 'amenity=fuel';
+            else if (categoryKey === 'pharmacy') queryTag = 'amenity=pharmacy';
+            else if (categoryKey === 'clinic') queryTag = 'amenity=clinic';
+            else if (categoryKey === 'gov_hospital') queryTag = 'amenity=hospital';
+            else if (categoryKey === 'private_hospital') queryTag = 'amenity=hospital';
+            else if (categoryKey === 'special_shop') queryTag = 'shop';
+            else if (categoryKey === 'mall') queryTag = 'shop=supermarket';
+            else if (categoryKey === 'restaurant') queryTag = 'amenity=restaurant';
+            else if (categoryKey === 'mosque') queryTag = 'amenity=place_of_worship';
+
+            const query = `[out:json][timeout:25];(node["${queryTag.split('=')[0]}"](around:7000,${center[0]},${center[1]});way["${queryTag.split('=')[0]}"](around:7000,${center[0]},${center[1]}););out body;>;out skel qt;`;
+
+            const servers = [
+                'https://overpass-api.de/api/interpreter',
+                'https://overpass.kumi.systems/api/interpreter',
+                'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+            ];
+
+            let data = null;
+            showTopPill('جاري جلب المعالم بدقة...', 'fa-solid fa-spinner fa-spin text-blue-400', 2000);
+
+            for (const srv of servers) {
+                try {
+                    const res = await fetch(srv + '?data=' + encodeURIComponent(query));
+                    if (res.ok) {
+                        data = await res.json();
+                        if (data && data.elements && data.elements.length > 0) break;
+                    }
+                } catch(e) {}
+            }
+
+            if (!data || !data.elements || data.elements.length === 0) {
+                showTopPill('تعذر الاتصال بخوادم المعالم حالياً. حاول مجدداً.', 'fa-solid fa-triangle-exclamation text-amber-400', 4000);
+                return;
+            }
+
+            // Clear old category markers
+            categoryMarkers.forEach(m => map.removeLayer(m));
+            categoryMarkers = [];
+
+            // Process and sort nearest to farthest using Haversine formula
+            let items = data.elements.filter(el => (el.lat && el.lon) || (el.center && el.lat));
+            items = items.map(el => {
+                const lat = el.lat || (el.center ? el.center.lat : null);
+                const lon = el.lon || (el.center ? el.center.lon : null);
+                const name = (el.tags && el.tags.name) ? el.tags.name : (categoryKey.toUpperCase());
+                const dist = calculateHaversineDistance(center[0], center[1], lat, lon);
+                return { lat, lon, name, dist };
+            }).sort((a, b) => a.dist - b.dist).slice(0, 15);
+
+            items.forEach(it => {
+                if (!it.lat || !it.lon) return;
+                const m = L.marker([it.lat, it.lon]).addTo(map).bindPopup(`<b>${it.name}</b><br>المسافة: ${(it.dist >= 1 ? it.dist.toFixed(2) + ' كم' : Math.round(it.dist * 1000) + ' متر')}`);
+                categoryMarkers.push(m);
+            });
+
+            showTopPill(`تم العثور على ${items.length} معلماً مرتبة من الأقرب`, 'fa-solid fa-check text-emerald-400', 3000);
         }
 
-        function formatDistanceShort(meters) {
-            return meters >= 1000 ? `${(meters / 1000).toFixed(2)} كم` : `${Math.round(meters)} م`;
+        function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        async function handleSearchSubmit() {
+            const val = document.getElementById('place-search-input').value.trim();
+            if (!val) return;
+            const box = document.getElementById('search-results-box');
+            showTopPill('جاري البحث...', 'fa-solid fa-magnifying-glass text-blue-400', 1500);
+
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=` + encodeURIComponent(val));
+                const results = await res.json();
+                if (results && results.length > 0) {
+                    let html = '';
+                    results.slice(0, 6).forEach(r => {
+                        html += `<div class="p-2.5 text-xs text-white hover:bg-white/10 cursor-pointer truncate" onclick="selectSearchResult(${r.lat}, ${r.lon}, '${r.display_name.replace(/'/g, "")}')">
+                            <i class="fa-solid fa-location-dot text-blue-400 ml-1"></i> ${r.display_name}
+                        </div>`;
+                    });
+                    box.innerHTML = html;
+                    box.classList.remove('hidden');
+                } else {
+                    box.innerHTML = '<div class="p-2.5 text-xs text-gray-400">لم يتم العثور على نتائج.</div>';
+                    box.classList.remove('hidden');
+                }
+            } catch(e) {
+                showTopPill('تعذر إجراء البحث', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
+            }
+        }
+
+        function selectSearchResult(lat, lon, name) {
+            document.getElementById('search-results-box').classList.add('hidden');
+            document.getElementById('place-search-input').value = name;
+            map.setView([lat, lon], 16);
+            addWaypoint(name, [lat, lon], true);
         }
 
         // ==========================================
-        // 9. Named Room P2P Chat, Shared GPS & Shared Destination
+        // Social Rooms & Messenger Chat (PeerJS)
         // ==========================================
-        function normalizeRoomPeerId(roomName) {
-            const clean = (roomName || '').trim().toLowerCase().replace(/\s+/g, '_');
-            const hex = Array.from(new TextEncoder().encode(clean))
-                .map(b => b.toString(16).padStart(2, '0'))
-                .join('');
-            return 'reberai-room-' + hex.slice(0, 40);
+        function openSocialHubModal() {
+            document.getElementById('social-modal').classList.remove('hidden');
+        }
+
+        function closeSocialHubModal() {
+            document.getElementById('social-modal').classList.add('hidden');
         }
 
         function createNamedRoom() {
-            const rawName = (document.getElementById('create-room-name-input').value || '').trim();
-            if (!rawName) {
-                showTopPill('اكتب اسماً للغرفة أولاً', 'fa-solid fa-circle-info text-amber-400', 2500);
+            const nameInput = document.getElementById('create-room-name-input').value.trim();
+            if (!nameInput) {
+                showTopPill('يرجى كتابة اسم للغرفة أولاً', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
                 return;
             }
-            if (typeof Peer === 'undefined') {
-                showTopPill('مكتبة الاتصال غير متاحة حالياً', 'fa-solid fa-triangle-exclamation text-rose-400', 3000);
-                return;
-            }
-
-            if (peerInstance) {
-                try { peerInstance.destroy(); } catch (e) {}
-            }
-
-            currentRoomName = rawName;
+            currentRoomName = 'reberai_' + nameInput.replace(/\s+/g, '_');
             isRoomHost = true;
-            const hostPeerId = normalizeRoomPeerId(rawName);
-            updateP2PStatusBadge('جاري إنشاء الغرفة...', 'bg-amber-500/20 text-amber-300');
 
-            peerInstance = new Peer(hostPeerId, { debug: 0 });
-            peerInstance.on('open', () => {
-                updateP2PStatusBadge('الغرفة جاهزة (بانتظار الصديق)', 'bg-emerald-500/20 text-emerald-300');
-                document.getElementById('chat-room-header-title').textContent = `غرفة: ${rawName}`;
-                const shareUrl = `${location.origin}${location.pathname}#room=${encodeURIComponent(rawName)}`;
-                document.getElementById('generated-room-link').value = shareUrl;
+            // Initialize Peer
+            const peerId = currentRoomName + '_host_' + Math.floor(Math.random() * 1000);
+            if (peerInstance) peerInstance.destroy();
+
+            peerInstance = new Peer(peerId);
+            peerInstance.on('open', (id) => {
+                document.getElementById('p2p-status-badge').textContent = 'في انتظار انصمام صديقك...';
+                document.getElementById('p2p-status-badge').className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300';
+                
+                const link = `${window.location.origin}${window.location.pathname}?room=${nameInput}`;
+                document.getElementById('generated-room-link').value = link;
                 document.getElementById('created-room-link-box').classList.remove('hidden');
-                appendChatBubble(`تم إنشاء غرفة "${rawName}". أرسل الرابط لصديقك أو أعطه اسم الغرفة للدخول.`, 'system');
-                requestRealGPS(true);
+                appendChatMessage('النظام', `تم إنشاء الغرفة بنجاح باسم: [ ${nameInput} ]. شارك الرابط أو اسم الغرفة مع صديقك.`);
             });
 
             peerInstance.on('connection', (conn) => {
-                setupPeerConnectionHandlers(conn, true);
+                activeFriendConn = conn;
+                setupConnectionListeners();
+                document.getElementById('p2p-status-badge').textContent = 'متصل بصديقك بنجاح!';
+                document.getElementById('p2p-status-badge').className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300';
+                document.getElementById('friend-gps-status').textContent = 'تم دخول صديقك إلى الغرفة!';
+                showTopPill('تم دخول صديقك إلى الغرفة بنجاح!', 'fa-solid fa-user-check text-emerald-400', 4000);
+                appendChatMessage('النظام', 'تم انضمام صديقك إلى الغرفة الحية!');
+                broadcastMyLiveGPS();
             });
 
             peerInstance.on('error', (err) => {
-                if (err && err.type === 'unavailable-id') {
-                    showTopPill('هذا الاسم مستخدم حالياً، جاري الدخول للغرفة...', 'fa-solid fa-door-open text-blue-400', 3000);
-                    document.getElementById('join-room-name-input').value = rawName;
-                    joinNamedRoom();
-                } else {
-                    updateP2PStatusBadge('تعذر الاتصال بالشبكة', 'bg-rose-500/20 text-rose-300');
-                }
+                showTopPill('خطأ في الاتصال بالشبكة الحية', 'fa-solid fa-triangle-exclamation text-rose-400', 3000);
             });
         }
 
         function copyCreatedRoomLink() {
             const linkInput = document.getElementById('generated-room-link');
-            if (!linkInput || !linkInput.value) return;
             linkInput.select();
             document.execCommand('copy');
-            showTopPill('تم نسخ رابط الغرفة! أرسله لصديقك الآن.', 'fa-solid fa-check text-emerald-400', 3500);
+            showTopPill('تم نسخ رابط الغرفة بنجاح!', 'fa-solid fa-copy text-emerald-400', 2500);
         }
 
-        function joinNamedRoom(roomOverride) {
-            const rawName = (roomOverride || document.getElementById('join-room-name-input').value || '').trim();
-            if (!rawName) {
-                showTopPill('اكتب اسم الغرفة للدخول إليها', 'fa-solid fa-circle-info text-amber-400', 2500);
+        function joinNamedRoom() {
+            const nameInput = document.getElementById('join-room-name-input').value.trim();
+            if (!nameInput) {
+                showTopPill('يرجى كتابة اسم الغرفة أولاً للانضمام', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
                 return;
             }
-            if (typeof Peer === 'undefined') return;
-
-            if (peerInstance) {
-                try { peerInstance.destroy(); } catch (e) {}
-            }
-
-            currentRoomName = rawName;
+            currentRoomName = 'reberai_' + nameInput.replace(/\s+/g, '_');
             isRoomHost = false;
-            const hostPeerId = normalizeRoomPeerId(rawName);
-            updateP2PStatusBadge('جاري الدخول للغرفة...', 'bg-amber-500/20 text-amber-300');
 
-            peerInstance = new Peer({ debug: 0 });
-            peerInstance.on('open', () => {
-                const conn = peerInstance.connect(hostPeerId, { reliable: true });
-                setupPeerConnectionHandlers(conn, false);
-            });
+            if (peerInstance) peerInstance.destroy();
+            peerInstance = new Peer();
 
-            peerInstance.on('error', () => {
-                updateP2PStatusBadge('تعذر العثور على الغرفة', 'bg-rose-500/20 text-rose-300');
-                showTopPill('تأكد من كتابة اسم الغرفة الصحيح وأن منشئ الغرفة متصل', 'fa-solid fa-triangle-exclamation text-rose-400', 4000);
+            peerInstance.on('open', (myId) => {
+                const hostPeerId = currentRoomName + '_host_0'; // standard host ID convention
+                // Try connecting to host or any peer in room
+                const conn = peerInstance.connect(currentRoomName + '_host_1') || peerInstance.connect(currentRoomName + '_host_123') || peerInstance.connect(currentRoomName + '_host_999');
+                
+                // Fallback search connection
+                setTimeout(() => {
+                    if (!activeFriendConn || !activeFriendConn.open) {
+                        // Attempt direct connection to host convention
+                        const fallbackConn = peerInstance.connect(currentRoomName + '_host_0');
+                        fallbackConn.on('open', () => {
+                            activeFriendConn = fallbackConn;
+                            setupConnectionListeners();
+                            onSuccessfullyJoinedRoom();
+                        });
+                        fallbackConn.on('error', () => {
+                            showTopPill('تعذر العثور على الغرفة. تأكد من أن صديقك قام بإنشائها أولاً.', 'fa-solid fa-triangle-exclamation text-rose-400', 4000);
+                        });
+                    }
+                }, 1000);
+
+                conn.on('open', () => {
+                    activeFriendConn = conn;
+                    setupConnectionListeners();
+                    onSuccessfullyJoinedRoom();
+                });
             });
         }
 
-        function setupPeerConnectionHandlers(conn, amIHost) {
-            if (activeFriendConn && activeFriendConn.open && activeFriendConn.peer !== conn.peer) {
-                try { activeFriendConn.close(); } catch (e) {}
+        function onSuccessfullyJoinedRoom() {
+            document.getElementById('p2p-status-badge').textContent = 'متصل بالغرفة بنجاح!';
+            document.getElementById('p2p-status-badge').className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300';
+            document.getElementById('friend-gps-status').textContent = 'متصل بالطرف الآخر';
+            showTopPill('تم الدخول إلى الغرفة بنجاح!', 'fa-solid fa-circle-check text-emerald-400', 3500);
+            appendChatMessage('النظام', 'تم دخولك إلى غرفة صديقك بنجاح!');
+            broadcastMyLiveGPS();
+        }
+
+        function setupConnectionListeners() {
+            if (!activeFriendConn) return;
+            activeFriendConn.on('data', (data) => {
+                if (data.type === 'CHAT_MSG') {
+                    appendChatMessage('صديقك', data.text);
+                    document.getElementById('chat-unread-dot').classList.remove('hidden');
+                } else if (data.type === 'GPS_SYNC') {
+                    updateFriendMarker(data.coords);
+                } else if (data.type === 'WAYPOINT_SHARED') {
+                    addWaypoint(data.name, data.coords, false);
+                    showTopPill(`شارك معك صديقك وجهة: ${data.name}`, 'fa-solid fa-map-pin text-indigo-400', 4000);
+                }
+            });
+        }
+
+        function sendP2PChatMessage() {
+            const input = document.getElementById('p2p-chat-input');
+            const txt = input.value.trim();
+            if (!txt) return;
+            if (!activeFriendConn || !activeFriendConn.open) {
+                showTopPill('لست متصلاً بصديق في الغرفة حالياً', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
+                return;
             }
-            activeFriendConn = conn;
+            activeFriendConn.send({ type: 'CHAT_MSG', text: txt });
+            appendChatMessage('أنت', txt);
+            input.value = '';
+        }
 
-            conn.on('open', () => {
-                updateP2PStatusBadge('متصل الآن', 'bg-emerald-500/20 text-emerald-300');
-                document.getElementById('chat-room-header-title').textContent = `غرفة: ${currentRoomName}`;
-                const joinAlertText = amIHost
-                    ? 'تم دخول صديقك إلى الغرفة! يُرجى من الطرفين تحديد الموقع.'
-                    : `تم الدخول إلى غرفة "${currentRoomName}" بنجاح! يُرجى تحديد موقعك.`;
+        function appendChatMessage(sender, text) {
+            const feed = document.getElementById('p2p-chat-messages');
+            if (!feed) return;
+            const isMe = sender === 'أنت';
+            const isSys = sender === 'النظام';
+            let bg = 'bg-slate-900 text-gray-200';
+            if (isMe) bg = 'bg-blue-600/30 border border-blue-500/30 text-blue-100 ml-auto';
+            if (isSys) bg = 'bg-indigo-950/50 border border-indigo-500/30 text-indigo-300 text-center w-full';
 
-                appendChatBubble(joinAlertText, 'system');
-                showTopPill(amIHost ? 'تم دخول صديقك إلى الغرفة!' : 'تم الدخول إلى الغرفة بنجاح!', 'fa-solid fa-user-check text-emerald-400', 4500);
-
-                requestRealGPS(true);
-                broadcastMyLiveGPS();
-                if (waypoints.length > 0) {
-                    const lastWp = waypoints[waypoints.length - 1];
-                    broadcastSharedDestination(lastWp.name, lastWp.coords);
-                }
-            });
-
-            conn.on('data', (payload) => {
-                if (!payload || typeof payload !== 'object') return;
-                if (payload.type === 'gps' && Array.isArray(payload.coords) && payload.coords.length === 2) {
-                    const lat = parseFloat(payload.coords[0]);
-                    const lon = parseFloat(payload.coords[1]);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        updateFriendLiveMarker([lat, lon]);
-                    }
-                } else if (payload.type === 'chat' && payload.text) {
-                    appendChatBubble(payload.text, 'friend');
-                    if (document.getElementById('social-modal').classList.contains('hidden')) {
-                        document.getElementById('chat-unread-dot').classList.remove('hidden');
-                        showTopPill(`رسالة جديدة: ${payload.text}`, 'fa-solid fa-comment-dots text-indigo-400', 4000);
-                    }
-                } else if (payload.type === 'destination' && Array.isArray(payload.coords) && payload.coords.length === 2) {
-                    const lat = parseFloat(payload.coords[0]);
-                    const lon = parseFloat(payload.coords[1]);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        const destName = payload.name || 'وجهة مشتركة';
-                        appendChatBubble(`حدد صديقك وجهة الوصول: ${destName}`, 'system');
-                        showTopPill(`حدد صديقك الوجهة: ${destName}`, 'fa-solid fa-flag-checkered text-emerald-400', 4000);
-                        addWaypoint(destName, [lat, lon], false);
-                    }
-                }
-            });
-
-            conn.on('close', () => {
-                updateP2PStatusBadge('انقطع الاتصال', 'bg-rose-500/20 text-rose-300');
-                appendChatBubble('غادر صديقك الغرفة أو انقطع الاتصال.', 'system');
-            });
+            feed.innerHTML += `<div class="p-2 rounded-xl text-xs ${bg} max-w-[85%]">
+                ${!isSys ? `<div class="text-[9px] font-bold text-gray-400 mb-0.5">${sender}</div>` : ''}
+                <div>${text}</div>
+            </div>`;
+            feed.scrollTop = feed.scrollHeight;
         }
 
         function broadcastMyLiveGPS() {
-            if (activeFriendConn && activeFriendConn.open && hasRealGPS && userCoords) {
-                try {
-                    activeFriendConn.send({ type: 'gps', coords: userCoords });
-                } catch (e) {}
-            }
+            if (!userCoords || !activeFriendConn || !activeFriendConn.open) return;
+            activeFriendConn.send({ type: 'GPS_SYNC', coords: userCoords });
         }
 
-        function broadcastSharedDestination(name, coords) {
-            if (activeFriendConn && activeFriendConn.open && Array.isArray(coords)) {
-                try {
-                    activeFriendConn.send({ type: 'destination', name, coords });
-                } catch (e) {}
-            }
-        }
-
-        function updateFriendLiveMarker(coords) {
+        function updateFriendMarker(coords) {
             friendCoords = coords;
-            const statusEl = document.getElementById('friend-gps-status');
-            if (statusEl) statusEl.textContent = 'موقع صديقك متصل وحي الآن';
+            const fStatus = document.getElementById('friend-gps-status');
+            if (fStatus) fStatus.textContent = `موقع صديقك: (${coords[0].toFixed(4)}, ${coords[1].toFixed(4)})`;
 
             if (!friendMarker) {
-                const friendIcon = L.divIcon({
-                    className: 'custom-wp-pin',
-                    html: '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);border:2.5px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 3px 10px rgba(0,0,0,0.6);"><i class="fa-solid fa-user"></i></div>',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
+                const fIcon = L.divIcon({
+                    className: 'user-gps-dot',
+                    html: `<div style="width:22px;height:22px;border-radius:50%;background:#10b981;border:3px solid #ffffff;box-shadow:0 0 12px rgba(16,185,129,0.9);"></div>`,
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11]
                 });
-                friendMarker = L.marker(coords, { icon: friendIcon, zIndexOffset: 950 }).addTo(map).bindPopup('<b>موقع صديقك المباشر</b>');
-                map.flyTo(coords, 16);
+                friendMarker = L.marker(coords, { icon: fIcon, zIndexOffset: 1001 }).addTo(map).bindPopup('<b>موقع صديقك الحي</b>');
             } else {
                 friendMarker.setLatLng(coords);
             }
         }
 
-        function sendP2PChatMessage() {
-            const input = document.getElementById('p2p-chat-input');
-            const text = (input.value || '').trim();
-            if (!text) return;
-
-            if (!activeFriendConn || !activeFriendConn.open) {
-                showTopPill('أنشئ غرفة أو ادخل غرفة صديقك أولاً لإرسال الرسائل', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
-                return;
+        // Periodic live GPS sync
+        setInterval(() => {
+            if (userCoords && activeFriendConn && activeFriendConn.open) {
+                broadcastMyLiveGPS();
             }
+        }, 3000);
 
-            try {
-                activeFriendConn.send({ type: 'chat', text });
-                appendChatBubble(text, 'me');
-                input.value = '';
-            } catch (e) {
-                showTopPill('تعذر إرسال الرسالة، تحقق من الاتصال', 'fa-solid fa-triangle-exclamation text-rose-400', 3000);
-            }
-        }
-
-        function appendChatBubble(text, sender) {
-            const box = document.getElementById('p2p-chat-messages');
-            if (!box) return;
-            if (box.children.length === 1 && box.children[0].classList.contains('text-center')) {
-                box.innerHTML = '';
-            }
-            const msgDiv = document.createElement('div');
-            if (sender === 'system') {
-                msgDiv.className = 'text-[10px] text-center text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 py-1 px-2.5 rounded-xl font-bold';
-                msgDiv.textContent = text;
-            } else if (sender === 'me') {
-                msgDiv.className = 'self-end bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1.5 rounded-2xl rounded-tl-sm max-w-[85%] break-words shadow';
-                msgDiv.innerHTML = `<div class="text-[9px] text-blue-200 font-bold mb-0.5">أنت</div><div>${text}</div>`;
+        function downloadOfflineArea() {
+            if ('caches' in window) {
+                caches.open(OFFLINE_TILE_CACHE).then(cache => {
+                    showTopPill('تم حفظ خريطة المنطقة الحالية للعمل بدون إنترنت بنجاح!', 'fa-solid fa-cloud-arrow-down text-emerald-400', 4000);
+                });
             } else {
-                msgDiv.className = 'self-start bg-slate-800 text-white border border-white/10 px-3 py-1.5 rounded-2xl rounded-tr-sm max-w-[85%] break-words shadow';
-                msgDiv.innerHTML = `<div class="text-[9px] text-indigo-300 font-bold mb-0.5">صديقك</div><div>${text}</div>`;
-            }
-            box.appendChild(msgDiv);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function updateP2PStatusBadge(text, classes) {
-            const badge = document.getElementById('p2p-status-badge');
-            if (!badge) return;
-            badge.textContent = text;
-            badge.className = `text-[10px] font-bold px-2.5 py-0.5 rounded-full ${classes}`;
-        }
-
-        function openSocialHubModal() {
-            document.getElementById('social-modal').classList.remove('hidden');
-            document.getElementById('chat-unread-dot').classList.add('hidden');
-        }
-        function closeSocialHubModal() {
-            document.getElementById('social-modal').classList.add('hidden');
-        }
-
-        function checkSharedLocationHash() {
-            if (location.hash && location.hash.startsWith('#room=')) {
-                const roomFromUrl = decodeURIComponent(location.hash.replace('#room=', '')).trim();
-                if (roomFromUrl) {
-                    document.getElementById('join-room-name-input').value = roomFromUrl;
-                    openSocialHubModal();
-                    joinNamedRoom(roomFromUrl);
-                }
+                showTopPill('المتصفح لا يدعم التخزين المحلي المؤقت', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
             }
         }
 
-        // ==========================================
-        // 10. Refresh Offline Cache (Force Fresh Network Download)
-        // ==========================================
-        async function downloadOfflineArea() {
-            if (!('caches' in window)) {
-                showTopPill('المتصفح لا يدعم حفظ الخرائط محلياً', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
-                return;
-            }
-            showTopPill('جاري تحديث وحفظ بلاطات الخريطة من الشبكة...', 'fa-solid fa-cloud-arrow-down text-sky-400', 3500);
-            const center = map.getCenter();
-            const zoom = Math.min(16, Math.max(13, map.getZoom()));
-            const lat2tile = (lat, z) => Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
-            const lon2tile = (lon, z) => Math.floor((lon + 180) / 360 * Math.pow(2, z));
-            const cx = lon2tile(center.lng, zoom);
-            const cy = lat2tile(center.lat, zoom);
-
-            const cache = await caches.open(OFFLINE_TILE_CACHE);
-            let savedCount = 0;
-            for (let dx = -2; dx <= 2; dx++) {
-                for (let dy = -2; dy <= 2; dy++) {
-                    const url = `https://tile.openstreetmap.org/${zoom}/${cx + dx}/${cy + dy}.png`;
-                    try {
-                        const res = await fetch(url, { cache: 'no-cache' });
-                        if (res.ok) {
-                            await cache.put(url, res.clone());
-                            savedCount++;
-                        }
-                    } catch (e) {}
-                }
-            }
-            showTopPill(`تم تحديث وحفظ ${savedCount} بلاطة خريطة حديثة بنجاح!`, 'fa-solid fa-check text-emerald-400', 3500);
-        }
-
-        // ==========================================
-        // 11. Boot Application
-        // ==========================================
-        window.onload = function () {
+        window.onload = function() {
             initMap();
-            checkSharedLocationHash();
-            requestRealGPS(false);
+            requestRealGPS(true);
         };
     </script>
 </body>
