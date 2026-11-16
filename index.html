@@ -73,27 +73,27 @@
             -webkit-backdrop-filter: blur(18px);
         }
         .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        /* علامات الخريطة الاحترافية */
+        /* علامات الخريطة الاحترافية — ثابتة 100% بدون انزياح عند التكبير والتصغير */
         .poi-custom-marker {
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: none !important;
+        }
+        .poi-pin-inner {
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             border: 2.5px solid #ffffff;
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
             color: #ffffff;
             font-size: 13px;
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .poi-custom-marker:hover {
-            transform: scale(1.25);
-            z-index: 9999 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         /* تسميات دائمة فائقة الوضوح على الخريطة بدون تغويش */
         .crisp-map-label {
@@ -131,17 +131,21 @@
         .custom-wp-pin {
             width: 30px !important;
             height: 30px !important;
-            margin-left: -15px !important;
-            margin-top: -15px !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: transparent !important;
+            border: none !important;
         }
         .user-gps-dot {
             width: 24px !important;
             height: 24px !important;
-            margin-left: -12px !important;
-            margin-top: -12px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: none !important;
         }
         @keyframes pulse-ring {
             0% { transform: scale(0.8); opacity: 0.8; }
@@ -507,7 +511,7 @@
     <!-- Application Script -->
     <script>
         // =========================================================================
-        // GLOBAL STATE VARIABLES (Fixed ReferenceError)
+        // GLOBAL STATE VARIABLES & CORE HELPERS
         // =========================================================================
         let map = null;
         let userMarker = null;
@@ -521,18 +525,124 @@
         let userCoords = null;
         let hasRealGPS = false;
         let currentMapTheme = 'standard';
-        let activeFriendConn = null;
-        let peerInstance = null;
-        let localRoomChannel = null;
-        let senderSessionId = 'usr_' + Math.random().toString(36).substring(2, 9);
-        let currentRoomCleanName = '';
-        let joinRetryTimer = null;
 
-        // Custom 2026 Verified Database for Schools, Shifts, and Shops
+        // Room & P2P Chat State
+        let peerInstance = null;
+        let activeFriendConn = null;
+        let localRoomChannel = null;
+        let currentRoomCleanName = null;
+        let joinRetryTimer = null;
+        const senderSessionId = 'user_' + Math.random().toString(36).substring(2, 10);
+
+        let pillTimer = null;
+        function showTopPill(text, iconClass = 'fa-solid fa-circle-info text-sky-400', duration = 3000) {
+            const pill = document.getElementById('top-status-pill');
+            const icon = document.getElementById('top-pill-icon');
+            const txt = document.getElementById('top-pill-text');
+            if (!pill || !icon || !txt) return;
+            icon.className = iconClass;
+            txt.textContent = text;
+            pill.classList.remove('hidden');
+            if (pillTimer) clearTimeout(pillTimer);
+            pillTimer = setTimeout(() => {
+                pill.classList.add('hidden');
+            }, duration);
+        }
+
+        function openAddPlaceModal() {
+            const modal = document.getElementById('add-place-modal');
+            const coordsPreview = document.getElementById('new-place-coords-preview');
+            if (map && coordsPreview) {
+                const c = map.getCenter();
+                coordsPreview.textContent = `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
+            }
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeAddPlaceModal() {
+            const modal = document.getElementById('add-place-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function saveCustomPlace2026() {
+            const nameInput = document.getElementById('new-place-name');
+            const catSelect = document.getElementById('new-place-cat');
+            const noteInput = document.getElementById('new-place-note');
+            const name = nameInput ? nameInput.value.trim() : '';
+            if (!name) {
+                showTopPill('يرجى إدخال اسم المكان أو المدرسة أولاً', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
+                return;
+            }
+            const center = map ? map.getCenter() : { lat: 35.4681, lng: 44.3922 };
+            const newItem = {
+                name,
+                aliases: [name],
+                category: catSelect ? catSelect.value : 'shops',
+                lat: center.lat,
+                lon: center.lng,
+                note: noteInput ? noteInput.value.trim() : ''
+            };
+            const savedLocal = JSON.parse(localStorage.getItem('reberai_custom_2026') || '[]');
+            savedLocal.push(newItem);
+            localStorage.setItem('reberai_custom_2026', JSON.stringify(savedLocal));
+
+            if (nameInput) nameInput.value = '';
+            if (noteInput) noteInput.value = '';
+            closeAddPlaceModal();
+            showTopPill(`تم حفظ وتثبيت (${name}) على الخريطة بنجاح!`, 'fa-solid fa-circle-check text-emerald-400', 3500);
+            searchStrictCategory(newItem.category);
+        }
+
+        function changeAppLanguage(lang) {
+            const d = I18N_DICT[lang] || I18N_DICT['ar'];
+            const mapIds = {
+                'app-subtitle': d.subtitle,
+                'lbl-my-loc': d.myLoc,
+                'btn-search-submit': d.searchBtn,
+                'lbl-cat-header': d.catHeader,
+                'cat-mosque': d.mosque,
+                'cat-school': d.school,
+                'cat-univ': d.univ,
+                'cat-fuel': d.fuel,
+                'cat-gov-hosp': d.govHosp,
+                'cat-pharmacy': d.pharmacy,
+                'cat-clinic': d.clinic,
+                'cat-mall': d.mall,
+                'cat-cosmetics': d.cosmetics,
+                'cat-shops': d.shops,
+                'cat-rest': d.rest,
+                'lbl-mode-header': d.modeHeader,
+                'mode-car': d.car,
+                'mode-walk': d.walk,
+                'mode-bike': d.bike,
+                'lbl-waypoints-title': d.wpTitle,
+                'btn-clear-wp': d.clearWp,
+                'lbl-dist-title': d.distTitle,
+                'lbl-dur-title': d.durTitle,
+                'btn-social-room': d.socialRoom,
+                'btn-offline-save': d.offlineSave
+            };
+            Object.entries(mapIds).forEach(([id, val]) => {
+                const el = document.getElementById(id);
+                if (el && val) el.textContent = val;
+            });
+            const searchIn = document.getElementById('place-search-input');
+            if (searchIn && d.searchPlaceholder) searchIn.placeholder = d.searchPlaceholder;
+            showTopPill('تم تحديث لغة الواجهة بنجاح', 'fa-solid fa-globe text-sky-400', 2200);
+        }
+
+        // Custom 2026 Verified Database for Schools, Shifts, Universities, and Kirkuk Landmarks
         let CUSTOM_2026_PLACES = [
-            { name: 'مدرسة النور الابتدائية (دوامين: صباحي وظهري)', category: 'school', lat: 35.4695, lon: 44.3940, note: 'تشمل دوامين في نفس البناية: صباحي (مدرسة النور) وظهري (مدرسة الأمل الابتدائية)' },
-            { name: 'ثانوية كركوك للبنين (تم النقل لحي الواسطي)', category: 'school', lat: 35.4650, lon: 44.3880, note: 'تنبيه: تم نقل مقر المدرسة رسمياً إلى مبنى حي الواسطي الجديد مع الاحتفاظ بذات الاسم' },
-            { name: 'جامعة كركوك - الحي الجامعي الرئيسي', category: 'university', lat: 35.4820, lon: 44.4150, note: 'الموقع الرئيسي - كليات الهندسة والعلوم والطب' }
+            { name: 'الجامعة التقنية الشمالية - رئاسة وموقع كركوك', aliases: ['جامعة تقنية شمالية', 'التقنية الشمالية', 'الجامعة التقنية', 'ntu'], category: 'university', lat: 35.4426, lon: 44.3822, note: 'تضم: الكلية التقنية الهندسية، الكلية التقنية الصحية والطبية، المعهد التقني كركوك، والكلية التقنية الإدارية' },
+            { name: 'الكلية التقنية الصحية والطبية - كركوك', aliases: ['كلية صحية وطبية', 'الكلية الصحية', 'كلية طبية تقنية', 'تقنية صحية'], category: 'university', lat: 35.4438, lon: 44.3810, note: 'تابعة للجامعة التقنية الشمالية — تضم أقسام: المختبرات الطبية، التخدير، الأشعة، وصحة المجتمع' },
+            { name: 'المعهد التقني - كركوك (الجامعة التقنية الشمالية)', aliases: ['معهد تقني كركوك', 'المعهد التقني', 'معهد كركوك'], category: 'university', lat: 35.4415, lon: 44.3835, note: 'يضم الأقسام التكنولوجية والإدارية والطبية — قرب طريق بغداد / تسعين' },
+            { name: 'الكلية التقنية الهندسية - كركوك', aliases: ['كلية تقنية هندسية', 'هندسية كركوك', 'الكلية الهندسية التقنية'], category: 'university', lat: 35.4421, lon: 44.3802, note: 'تابعة للجامعة التقنية الشمالية — هندسة الوقود والطاقة، التبريد والتكييف، والمساحة' },
+            { name: 'جامعة كركوك - الحي الجامعي الرئيسي (الصيادة)', aliases: ['جامعة كركوك', 'رئاسة جامعة كركوك', 'كلية الهندسة جامعة كركوك', 'كلية العلوم جامعة كركوك'], category: 'university', lat: 35.4018, lon: 44.3415, note: 'المجمع الجامعي الرئيسي جنوب كركوك — يضم كليات الهندسة، العلوم، الزراعة، والقانون' },
+            { name: 'كلية الطب - جامعة كركوك', aliases: ['طب كركوك', 'كلية طب كركوك', 'كلية الطب'], category: 'university', lat: 35.4562, lon: 44.3885, note: 'قرب مستشفى آزادي التعليمي — جامعة كركوك' },
+            { name: 'مستشفى آزادي التعليمي - كركوك', aliases: ['مستشفى ازادي', 'آزادي', 'مستشفى آزادي'], category: 'gov_hospital', lat: 35.4550, lon: 44.3912, note: 'أكبر مستشفى تعليمي حكومي في كركوك — طوارئ واستشاريات 24 ساعة' },
+            { name: 'مستشفى كركوك العام (الجمهوري)', aliases: ['مستشفى كركوك العام', 'مستشفى الجمهوري', 'المستشفى العام'], category: 'gov_hospital', lat: 35.4685, lon: 44.3860, note: 'وسط مدينة كركوك — قرب جسر الشهداء' },
+            { name: 'مدرسة النور الابتدائية (دوامين: صباحي وظهري)', aliases: ['مدرسة النور', 'مدرسة الامل'], category: 'school', lat: 35.4695, lon: 44.3940, note: 'تشمل دوامين في نفس البناية: صباحي (مدرسة النور) وظهري (مدرسة الأمل الابتدائية)' },
+            { name: 'ثانوية كركوك للبنين (تم النقل لحي الواسطي)', aliases: ['ثانوية كركوك', 'اعدادية كركوك'], category: 'school', lat: 35.4650, lon: 44.3880, note: 'تنبيه: تم نقل مقر المدرسة رسمياً إلى مبنى حي الواسطي الجديد مع الاحتفاظ بذات الاسم' }
         ];
 
         const I18N_DICT = {
@@ -651,6 +761,7 @@
         };
 
         let baseTileLayer, nightTileLayer, satelliteTileLayer;
+        let routeRenderer = null;
 
         function initMap() {
             const defaultCenter = [35.4681, 44.3922]; // Kirkuk Center
@@ -658,12 +769,15 @@
                 center: defaultCenter,
                 zoom: 15,
                 zoomControl: false,
-                zoomAnimation: true,
+                zoomAnimation: false,
+                markerZoomAnimation: false,
                 fadeAnimation: true,
                 touchRotate: true,
                 rotate: true,
                 bearing: 0
             });
+
+            routeRenderer = L.svg({ padding: 0.6 });
 
             baseTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
@@ -678,10 +792,13 @@
                 const lbl = document.getElementById('rotation-angle-label');
                 if (slider) slider.value = angle < 0 ? angle + 360 : angle;
                 if (lbl) lbl.textContent = `${angle}°`;
+                if (routePolyline) routePolyline.redraw();
             });
 
-            map.on('zoomend moveend', () => {
-                if (routePolyline) routePolyline.redraw();
+            map.on('zoom zoomend move moveend viewreset', () => {
+                if (routePolyline) {
+                    routePolyline.redraw();
+                }
             });
 
             map.on('click', async function(e) {
@@ -926,12 +1043,16 @@
                     if (routePolyline) map.removeLayer(routePolyline);
 
                     routePolyline = L.polyline(latlngs, {
+                        renderer: routeRenderer,
                         color: '#0284c7',
                         weight: 6,
-                        opacity: 0.88
+                        opacity: 0.9,
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                        smoothFactor: 1.0
                     }).addTo(map);
 
-                    map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+                    map.fitBounds(routePolyline.getBounds(), { padding: [50, 50], animate: false });
                 }
             } catch(e) {
                 showTopPill('تعذر حساب المسار بدقة من OSRM', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
@@ -1197,9 +1318,10 @@
                 const distText = poi.distKm >= 1 ? `${poi.distKm.toFixed(2)} كم` : `${Math.round(poi.distKm * 1000)} متر`;
                 const pinIcon = L.divIcon({
                     className: 'poi-custom-marker',
-                    html: `<div style="width:28px;height:28px;border-radius:50%;background:${cfg.color};border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.6);"><i class="fa-solid ${cfg.icon} text-xs"></i></div>`,
+                    html: `<div class="poi-pin-inner" style="background:${cfg.color};"><i class="fa-solid ${cfg.icon} text-xs"></i></div>`,
                     iconSize: [28, 28],
-                    iconAnchor: [14, 14]
+                    iconAnchor: [14, 14],
+                    popupAnchor: [0, -14]
                 });
 
                 const popupHtml = `
@@ -1246,137 +1368,127 @@
         }
 
         function focusVerifiedPoi(lat, lon, name) {
-            map.flyTo([lat, lon], 17);
+            map.setView([lat, lon], 17, { animate: false });
             showTopPill(`تم التركيز على: ${name}`, 'fa-solid fa-location-crosshairs text-sky-400', 2000);
+        }
+
+        function normalizeArabicSearchText(str) {
+            return (str || '')
+                .toLowerCase()
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/[\u064B-\u065F]/g, '')
+                .trim();
         }
 
         async function handleSearchSubmit() {
             const val = document.getElementById('place-search-input').value.trim();
             if (!val) return;
             const box = document.getElementById('search-results-box');
-            showTopPill('جاري البحث...', 'fa-solid fa-magnifying-glass text-sky-400', 1500);
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=` + encodeURIComponent(val));
-                const results = await res.json();
-                if (results && results.length > 0) {
-                    let html = '';
-                    results.slice(0, 6).forEach(r => {
-                        html += `<div class="p-2.5 text-xs text-white hover:bg-white/10 cursor-pointer truncate" onclick="selectSearchResult(${r.lat}, ${r.lon}, '${r.display_name.replace(/'/g, "")}')">
-                            <i class="fa-solid fa-location-dot text-sky-400 ml-1"></i> ${r.display_name}
-                        </div>`;
+            const normQuery = normalizeArabicSearchText(val);
+            showTopPill('رادار البحث الذكي يبحث عن المعلم والأقسام...', 'fa-solid fa-radar fa-spin text-sky-400', 1500);
+
+            const combinedResults = [];
+
+            // 1. البحث الفوري في قاعدة المعالم الدقيقة لكركوك والجامعات والأقسام
+            const savedLocal = JSON.parse(localStorage.getItem('reberai_custom_2026') || '[]');
+            const allKnowledge = [...CUSTOM_2026_PLACES, ...savedLocal];
+
+            allKnowledge.forEach(item => {
+                const normName = normalizeArabicSearchText(item.name);
+                const normNote = normalizeArabicSearchText(item.note || '');
+                const aliasMatch = (item.aliases || []).some(a => normalizeArabicSearchText(a).includes(normQuery) || normQuery.includes(normalizeArabicSearchText(a)));
+                if (normName.includes(normQuery) || normNote.includes(normQuery) || aliasMatch) {
+                    combinedResults.push({
+                        lat: item.lat,
+                        lon: item.lon,
+                        name: item.name,
+                        note: item.note || 'معلم موثق في كركوك',
+                        isExpertMatch: true
                     });
-                    box.innerHTML = html;
-                    box.classList.remove('hidden');
-                } else {
-                    box.innerHTML = '<div class="p-2.5 text-xs text-gray-400">لم يتم العثور على نتائج.</div>';
-                    box.classList.remove('hidden');
                 }
-            } catch(e) {
-                showTopPill('تعذر إجراء البحث', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
+            });
+
+            // 2. البحث المباشر في خرائط كركوك والعراق عبر Nominatim
+            try {
+                const queriesToRun = [
+                    `https://nominatim.openstreetmap.org/search?format=json&accept-language=ar&limit=6&viewbox=44.25,35.56,44.52,35.34&q=${encodeURIComponent(val + ' كركوك')}`,
+                    `https://nominatim.openstreetmap.org/search?format=json&accept-language=ar&limit=5&q=${encodeURIComponent(val)}`
+                ];
+                const responses = await Promise.allSettled(queriesToRun.map(u => fetch(u).then(r => r.json())));
+                const seen = new Set(combinedResults.map(c => `${c.lat.toFixed(3)}_${c.lon.toFixed(3)}`));
+
+                responses.forEach(res => {
+                    if (res.status === 'fulfilled' && Array.isArray(res.value)) {
+                        res.value.forEach(r => {
+                            const lat = parseFloat(r.lat);
+                            const lon = parseFloat(r.lon);
+                            const key = `${lat.toFixed(3)}_${lon.toFixed(3)}`;
+                            if (!seen.has(key)) {
+                                seen.add(key);
+                                const shortTitle = r.display_name.split(',').slice(0, 3).join('، ');
+                                combinedResults.push({
+                                    lat,
+                                    lon,
+                                    name: shortTitle,
+                                    note: r.display_name,
+                                    isExpertMatch: false
+                                });
+                            }
+                        });
+                    }
+                });
+            } catch (e) {}
+
+            if (combinedResults.length > 0) {
+                let html = '';
+                combinedResults.slice(0, 8).forEach(r => {
+                    const safeName = r.name.replace(/'/g, "").replace(/"/g, "");
+                    const safeNote = (r.note || '').replace(/'/g, "").replace(/"/g, "");
+                    html += `<div class="p-2.5 text-xs text-white hover:bg-sky-500/20 cursor-pointer transition border-b border-white/5" onclick="selectSearchResult(${r.lat}, ${r.lon}, '${safeName}', '${safeNote}')">
+                        <div class="font-extrabold flex items-center gap-1.5 ${r.isExpertMatch ? 'text-emerald-300' : 'text-white'}">
+                            <i class="fa-solid ${r.isExpertMatch ? 'fa-award text-emerald-400' : 'fa-location-dot text-sky-400'} shrink-0"></i>
+                            <span class="truncate">${r.name}</span>
+                        </div>
+                        ${r.note ? `<div class="text-[10px] text-gray-300 mt-0.5 line-clamp-2 leading-relaxed">${r.note}</div>` : ''}
+                    </div>`;
+                });
+                box.innerHTML = html;
+                box.classList.remove('hidden');
+            } else {
+                box.innerHTML = '<div class="p-3 text-xs text-gray-300 text-center">لم يُعثر على اسم مطابق. جرب كتابة اسم القسم أو الكلية أو اضغط على زر (إضافة معلم) لتسجيله فوراً.</div>';
+                box.classList.remove('hidden');
             }
         }
 
-        function selectSearchResult(lat, lon, name) {
+        function selectSearchResult(lat, lon, name, note = '') {
             document.getElementById('search-results-box').classList.add('hidden');
             document.getElementById('place-search-input').value = name;
-            map.setView([lat, lon], 16);
+            map.setView([lat, lon], 16, { animate: false });
             addWaypoint(name, [lat, lon], true);
-        }
-
-        // =========================================================================
-        // ADD PLACE & SCHOOL SHIFT MODAL
-        // =========================================================================
-        function openAddPlaceModal() {
-            const modal = document.getElementById('add-place-modal');
-            const center = map.getCenter();
-            document.getElementById('new-place-coords-preview').textContent = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
-            modal.classList.remove('hidden');
-        }
-
-        function closeAddPlaceModal() {
-            document.getElementById('add-place-modal').classList.add('hidden');
-        }
-
-        function saveCustomPlace2026() {
-            const name = document.getElementById('new-place-name').value.trim();
-            const category = document.getElementById('new-place-cat').value;
-            const note = document.getElementById('new-place-note').value.trim();
-
-            if (!name) {
-                showTopPill('يرجى كتابة اسم المكان أو المدرسة أولاً', 'fa-solid fa-triangle-exclamation text-amber-400', 3000);
-                return;
+            if (note) {
+                showTopPill(`📍 مرشد المعالم: ${note}`, 'fa-solid fa-circle-info text-emerald-400', 5000);
             }
-
-            const center = map.getCenter();
-            const newItem = { name, category, lat: center.lat, lon: center.lng, note };
-
-            const savedLocal = JSON.parse(localStorage.getItem('reberai_custom_2026') || '[]');
-            savedLocal.push(newItem);
-            localStorage.setItem('reberai_custom_2026', JSON.stringify(savedLocal));
-
-            closeAddPlaceModal();
-            showTopPill('تمت إضافة وتحديث المعلم بنجاح لسجلات 2026!', 'fa-solid fa-circle-check text-emerald-400', 3500);
-            searchStrictCategory(category);
         }
 
-        function changeAppLanguage(lang) {
-            const d = I18N_DICT[lang] || I18N_DICT['ar'];
-            document.getElementById('app-subtitle').textContent = d.subtitle;
-            document.getElementById('lbl-my-loc').textContent = d.myLoc;
-            document.getElementById('place-search-input').placeholder = d.searchPlaceholder;
-            document.getElementById('btn-search-submit').textContent = d.searchBtn;
-            document.getElementById('lbl-cat-header').innerHTML = `<i class="fa-solid fa-bullseye"></i> <span>${d.catHeader}</span>`;
-            document.getElementById('cat-mosque').textContent = d.mosque;
-            document.getElementById('cat-school').textContent = d.school;
-            document.getElementById('cat-univ').textContent = d.univ;
-            document.getElementById('cat-fuel').textContent = d.fuel;
-            document.getElementById('cat-gov-hosp').textContent = d.govHosp;
-            document.getElementById('cat-pharmacy').textContent = d.pharmacy;
-            document.getElementById('cat-clinic').textContent = d.clinic;
-            document.getElementById('cat-mall').textContent = d.mall;
-            document.getElementById('cat-cosmetics').textContent = d.cosmetics;
-            document.getElementById('cat-shops').textContent = d.shops;
-            document.getElementById('cat-rest').textContent = d.rest;
-            document.getElementById('lbl-mode-header').textContent = d.modeHeader;
-            document.getElementById('mode-car').textContent = d.car;
-            document.getElementById('mode-walk').textContent = d.walk;
-            document.getElementById('mode-bike').textContent = d.bike;
-            document.getElementById('lbl-waypoints-title').textContent = d.wpTitle;
-            document.getElementById('btn-clear-wp').textContent = d.clearWp;
-            document.getElementById('lbl-dist-title').textContent = d.distTitle;
-            document.getElementById('lbl-dur-title').textContent = d.durTitle;
-            document.getElementById('btn-social-room').textContent = d.socialRoom;
-            document.getElementById('btn-offline-save').textContent = d.offlineSave;
-            showTopPill('تم تحديث لغة المنصة بنجاح', 'fa-solid fa-globe text-sky-400', 2200);
-        }
-
-        function showTopPill(text, iconClass, duration = 3200) {
-            const pill = document.getElementById('top-status-pill');
-            const icon = document.getElementById('top-pill-icon');
-            const txt = document.getElementById('top-pill-text');
-            if (!pill || !icon || !txt) return;
-            icon.className = iconClass;
-            txt.textContent = text;
-            pill.classList.remove('hidden');
-            clearTimeout(window._pillTimer);
-            window._pillTimer = setTimeout(() => pill.classList.add('hidden'), duration);
-        }
-
+        // =========================================================================
         function toggleRightDrawer() {
             const box = document.getElementById('right-control-box');
             const icon = document.getElementById('drawer-toggle-icon');
             if (!box || !icon) return;
-            if (box.classList.contains('translate-x-[115%]))')) {
-                box.classList.remove('translate-x-[115%]');
+            const isClosed = box.classList.contains('hidden') || box.dataset.closed === 'true';
+            if (isClosed) {
+                box.classList.remove('hidden', 'translate-x-[115%]');
+                box.dataset.closed = 'false';
                 icon.className = 'fa-solid fa-xmark text-lg';
             } else {
-                box.classList.add('translate-x-[115%]');
+                box.classList.add('hidden');
+                box.dataset.closed = 'true';
                 icon.className = 'fa-solid fa-bars text-lg';
             }
         }
 
-        // =========================================================================
-        // 7. SOCIAL ROOMS & CHAT (PEERJS + BROADCAST)
         // =========================================================================
         function normalizeRoomToPeerId(rawName) {
             const cleaned = rawName.trim().toLowerCase().replace(/\s+/g, '_');
